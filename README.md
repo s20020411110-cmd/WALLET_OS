@@ -118,7 +118,7 @@ For multi-device changes, sync each device before switching to another one. Ledg
 The built-in assistant uses the managed Vercel AI Gateway route with `google/gemini-3.1-flash-lite`. In this mode:
 
 - The browser sends the signed-in user's current Supabase access token to `/api/ai`; the server verifies it against Supabase Auth before accepting a prompt.
-- The Vercel Function uses its request-scoped `x-vercel-oidc-token` to authenticate to AI Gateway. No long-lived provider or Gateway key is stored in the browser or repository.
+- The Vercel Function uses the runtime `VERCEL_OIDC_TOKEN` supplied by Vercel (with a request-header fallback) to authenticate to AI Gateway. No long-lived provider or Gateway key is stored in the browser or repository.
 - Each Gateway request sets `providerOptions.gateway.disallowPromptTraining: true`. AI Gateway must route to an endpoint with a no-prompt-training agreement; otherwise the request is rejected.
 - **No-prompt-training is not Zero Data Retention.** The provider may retain request data under its own terms. Per-request ZDR requires Vercel Pro or Enterprise; this project team is currently on Hobby, so the app does not claim ZDR and does not attempt to bypass the plan restriction.
 - The built-in Gateway route is limited to 20 requests per minute per signed-in user in each running function instance; each request is limited to 14 messages / 48,000 characters. Network access and an active cloud sign-in are required.
