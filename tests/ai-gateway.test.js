@@ -175,8 +175,10 @@ test('AI Gateway rejects requests when no no-training provider is available', as
     }
     if (String(url).endsWith('/v1/chat/completions')) {
       return new Response(JSON.stringify({
-        error: { message: 'No providers available for the no-prompt-training constraint.' }
-      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+        error: 'No providers available that disallow prompt training for model: google/gemini-3.1-flash-lite.',
+        type: 'no_providers_available',
+        statusCode: 400
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     throw new Error('Unexpected URL: ' + String(url));
   };
