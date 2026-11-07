@@ -164,7 +164,7 @@ function makeOfflineSyncHarness(html, rpcImpl) {
     __refreshCount: () => refreshCount
   };
   vm.createContext(sandbox);
-  vm.runInContext(engine + '\\nthis.__offlineApi = { cloudQueueRpc, cloudQueueLoad, cloudSyncPending, cloudMapLoad, isOffline: () => CLOUD_OFFLINE };', sandbox);
+  vm.runInContext(engine + '\nthis.__offlineApi = { cloudQueueRpc, cloudQueueLoad, cloudSyncPending, cloudMapLoad, isOffline: () => CLOUD_OFFLINE };', sandbox);
   return { sandbox, api: sandbox.__offlineApi, calls, localStorage };
 }
 
