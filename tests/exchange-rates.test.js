@@ -83,7 +83,7 @@ test('cloud creation forms use database RPCs instead of local-only writes', () =
     assert.match(html, new RegExp("cloudRpc\\('" + name + "'"));
   }
   assert.match(html, /async v=>\{if\(!\(\+v\.l>0\)\).*cloudUpsertBudget/);
-  assert.match(html, /p_asset_type:'gold'/);
+  assert.match(html, /p_subtype:cloudGoldSubtype\(/);\n  assert.match(html, /function cloudGoldSubtype\(/);
 });
 
 test('income and expense form types are translated to the ledger RPC contract', () => {
