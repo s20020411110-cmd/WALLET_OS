@@ -93,7 +93,7 @@ module.exports = async function exchangeRatesHandler(req, res) {
     }
 
     const plainText = textFromHtml(html);
-    const updatedMatch = plainText.match(/أخر\s*تحديث\s*[:：]\s*([^|]{1,24})/i);
+    const updatedMatch = plainText.match(/(?:أخر|آخر)\s*تحديث\s*[:：]?\s*(اليوم|أمس|today|yesterday|\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}[/-]\d{4})/i);
     return json(res, 200, {
       source: SOURCE_URL,
       sourceUpdatedLabel: updatedMatch ? updatedMatch[1].trim() : 'غير محدد',
