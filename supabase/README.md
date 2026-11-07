@@ -141,9 +141,10 @@ Add that same origin (and any custom production domain later adopted) to the all
 - Repository: `s20020411110-cmd/WALLET_OS`, branch `main`; linked to the separate Vercel project `wallet-os`.
 - Stable production URL: https://wallet-os-s20020411110-8096.vercel.app
 - Production deploys are served without Vercel SSO; preview deployments remain SSO-protected.
-- Latest verified deployment: `dpl_GTS21DN7yacFL7snDVdFf9HSEMoK`, state `READY`, source commit `7858b5a065a14db1e057bf175582deb94ae7ae8c`.
+- Latest verified application-code deployment: `dpl_GTS21DN7yacFL7snDVdFf9HSEMoK`, state `READY`, source commit `7858b5a065a14db1e057bf175582deb94ae7ae8c`.
+- The subsequent documentation-only production deployment `dpl_97DSQB4fGMiUvkzGBozRChAnCTHS` is also `READY` for commit `63152df03851a7c1020475541055d20e71e4f8da`.
 - The stable production URL returned HTTP 200 and served the Supabase SDK, publishable-key client, cloud CRUD RPC calls, financial posting RPC, and gold subtype mapping.
-- GitHub Actions run `42388516240` completed successfully for the source and cloud integration tests.
+- GitHub Actions integration tests completed successfully for application commit `7858b5a065a14db1e057bf175582deb94ae7ae8c` (run `42388516240`) and documentation commit `63152df03851a7c1020475541055d20e71e4f8da` (run `42388605292`).
 
 ## Remaining integration work
 
