@@ -95,6 +95,42 @@ Post-change Supabase Security Advisor: no findings.
 Post-change Performance Advisor: only informational unused-index findings on the empty database; the earlier unindexed-foreign-key findings were addressed.
 Post-change Health Advisor: no findings.
 
+## Browser integration
+
+The current main-branch browser app is connected to this project using the pinned Supabase JavaScript client and the publishable key only.
+
+### Authentication
+- Email/password sign-up and sign-in use Supabase Auth.
+- The browser restores a persisted Auth session at startup.
+- Sign-out revokes the local session; password reset uses Supabase Auth email.
+- A local-only guest mode remains available, but it does not synchronize to Supabase.
+- The former local password-hash login is no longer used to authenticate cloud accounts.
+
+### Cloud data mapping
+- Accounts are loaded from `wallet_account_balances`; balances are derived from journal lines.
+- Activity, savings goals, loans, investment positions/trades, categories and budgets are loaded from the authenticated user's rows.
+- Income/expense/transfer/savings/loan/investment operations use `post_financial_transaction`.
+- Wallet, savings goal, loan and investment creation use their dedicated RPCs.
+- Budgets use an owner-scoped upsert with period type/week fields.
+- Profile name, base currency and language sync to the user's `profiles` row.
+
+### Local import and recovery
+- When a cloud user has no financial records and local data exists, the app asks whether to import that device's data.
+- A JSON safety copy is written to localStorage under `wos_pre_cloud_backup_<user-id>` before import.
+- Import state is tracked separately per user; deterministic legacy idempotency keys allow a partial import to be retried without duplicating completed items.
+- The import maps local account IDs to cloud UUIDs and reconstructs all linked records and journal postings.
+- Existing records with incompatible currency relationships or missing links stop the import with an explicit error rather than silently changing the financial meaning.
+- Users should retain the local browser profile/safety copy until they have reconciled the imported balances and transaction history.
+
+### UI boundaries
+- Cloud journal entries are immutable through the old edit/delete controls. They are hidden/blocked for cloud accounts; an accounting correction workflow is required for changes.
+- Some metadata management actions (such as renaming/removing already-synced cloud entities) remain disabled until dedicated audited update/archive RPCs are added.
+- Market quote persistence/ingestion for the FX and gold quote tables is not yet wired to the existing client-side market feeds.
+
+### Deployment status
+- The source changes are committed to GitHub main.
+- A Vercel project for this repository was not previously linked; deployment must be verified separately before considering the new sign-in flow live at the production URL.
+
 ## Not yet connected to the browser app
 
 The current index.html still stores its data in localStorage and has a local-only sign-in mechanism. The database does not automatically sync with those local records yet. The next implementation phase must add Supabase Auth and a deliberate local-data import/reconciliation flow before treating WALLET OS as a persistent multi-user app.
