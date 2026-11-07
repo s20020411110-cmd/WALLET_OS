@@ -82,7 +82,7 @@ test('cloud creation forms use database RPCs instead of local-only writes', () =
   for (const name of ['create_wallet_account', 'create_savings_goal_v2', 'create_loan_v2', 'create_investment_asset_v2']) {
     assert.match(html, new RegExp("cloudRpc\\('" + name + "'"));
   }
-  assert.match(html, /async v=>\{if\(!\(\+v\.l>0\)\).*cloudUpsertBudget/);
+  assert.match(html, /CLOUD_USER\)\{await cloudUpsertBudget\(item\);await cloudRefresh\(\);return true;\}/);
   assert.match(html, /p_subtype:cloudGoldSubtype\(/);\n  assert.match(html, /function cloudGoldSubtype\(/);
 });
 
