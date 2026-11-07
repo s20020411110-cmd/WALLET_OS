@@ -1,0 +1,10 @@
+{
+  "appId": "com.walletos.finance",
+  "appName": "WALLET OS",
+  "webDir": "www",
+  "backgroundColor": "#102a28",
+  "server": {
+    "androidScheme": "https",
+    "hostname": "localhost"
+  }
+}
