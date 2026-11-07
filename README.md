@@ -58,3 +58,41 @@ The backend uses the OpenAI-compatible Chat Completions request shape (`POST /ch
 ## Data sent to the model
 
 The assistant receives a compact snapshot: totals by period, net worth, account balances, top income/expense categories, savings goals, budgets, and aggregate operation count. It does not send the full raw transaction list or transaction notes. The provider still processes the snapshot and chat messages, so only enable the integration with a provider you trust.
+
+
+## Supabase financial database
+
+The independent WALLET OS database is hosted in the existing Supabase project **wallet-os** (Singapore, Postgres 17). Its project reference is `lwefgfogrxavxczrznjl`.
+
+The hosted database has two applied migrations:
+
+- `20261107152547_wallet_os_finance_core_v1`
+- `20261107152753_wallet_os_concurrency_and_fk_indexes_v1`
+
+The schema includes user profiles, currencies, a chart of accounts, wallets, categories, budgets, savings goals, loans, investment assets and trades, transactions, double-entry journal entries and lines, FX quotes, gold price quotes, and audit logs. Read models are provided by `wallet_account_balances` and `monthly_financial_summary`.
+
+All 16 public tables have Row Level Security enabled. Financial records are scoped to the authenticated owner. Anonymous roles cannot read financial records or execute financial posting RPCs. Clients cannot directly insert or update the immutable journal; mutations use authenticated RPCs:
+
+- `create_wallet_account`
+- `create_savings_goal`
+- `create_loan`
+- `create_investment_asset`
+- `post_financial_transaction`
+
+The transaction posting function validates balances, records an FX snapshot, uses an idempotency key, writes its journal atomically, and enforces balanced base-currency debits and credits. Wallet and related financial rows are locked during posting to reduce concurrent spending races.
+
+### Database validation
+
+A rollback-only integration test ran against temporary synthetic Auth identities. It exercised opening balances, income, expense, same-currency transfers, cross-currency transfer, an idempotent retry, savings deposit and withdrawal, loan disbursement and repayment, investment buy and sale, insufficient-funds rejection, idempotency-payload mismatch rejection, direct journal write denial, and cross-user RLS isolation.
+
+The successful test run produced 11 transactions, 11 journal entries, and 24 journal lines; total base debits equalled total base credits. The test transaction was rolled back, leaving no synthetic users or financial data behind.
+
+Supabase Security Advisor reported no findings after the schema changes. Performance Advisor reported only informational unused-index notices, expected on a new database with no real workload; no unindexed foreign keys remained in the advisor output.
+
+### Important integration boundary
+
+The current browser application still keeps its financial state and its local sign-in flow in browser `localStorage`. The Supabase database is built and validated but is **not yet connected to the browser UI**. Do not treat the current local sign-in as Supabase Auth, and do not enter real financial data expecting it to sync to this database yet.
+
+The next integration step is to replace the local sign-in with Supabase Auth, map the existing local data model to the database RPCs and read models, and migrate user data only with an explicit import and reconciliation flow. Use only a publishable key in the browser; never expose a Supabase secret or service-role key.
+
+See [supabase/README.md](supabase/README.md) for the hosted schema and RPC contract.
