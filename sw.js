@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wallet-os-shell-v1';
+const CACHE_NAME = 'wallet-os-shell-v2';
 const SHELL_FILES = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg'];
 const SUPABASE_SDK = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0';
 
