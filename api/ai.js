@@ -137,12 +137,12 @@ async function gatewayHealth(req, res) {
     }
     const endpoints = Array.isArray(data && data.data) ? data.data
       : Array.isArray(data && data.endpoints) ? data.endpoints : [];
-    const zdrCount = endpoints.filter(item => item && item.has_zdr === true).length;
+    const noTrainingCount = endpoints.filter(item => item && item.has_no_training === true).length;
     return json(res, 200, {
       ok: true,
       gateway: 'reachable',
       model: AI_GATEWAY_MODEL,
-      zeroDataRetentionEndpoints: endpoints.length ? zdrCount : null
+      noPromptTrainingEndpoints: endpoints.length ? noTrainingCount : null
     });
   } catch {
     return json(res, 502, { ok: false, gateway: 'unreachable', error: 'Unable to reach AI Gateway.' });
@@ -202,7 +202,6 @@ module.exports = async function handler(req, res) {
           max_tokens: 1200,
           providerOptions: {
             gateway: {
-              zeroDataRetention: true,
               disallowPromptTraining: true
             }
           }
@@ -215,10 +214,10 @@ module.exports = async function handler(req, res) {
         const message = data && data.error && typeof data.error.message === 'string'
           ? data.error.message
           : 'AI Gateway returned HTTP ' + upstream.status + '.';
-        const privacyError = /zero.?data.?retention|zdr|provider.*available|plan|upgrade/i.test(message);
+        const privacyError = /no.?training|prompt.?training|training.*provider|provider.*available|no_providers_available/i.test(message);
         return json(res, upstream.status, {
           error: message.slice(0, 500),
-          code: privacyError ? 'ZDR_UNAVAILABLE' : 'AI_GATEWAY_ERROR'
+          code: privacyError ? 'NO_TRAINING_UNAVAILABLE' : 'AI_GATEWAY_ERROR'
         });
       }
 
@@ -238,7 +237,7 @@ module.exports = async function handler(req, res) {
       return json(res, 200, {
         reply: reply.trim(),
         model: data.model || AI_GATEWAY_MODEL,
-        privacyMode: 'zdr-required',
+        privacyMode: 'no-prompt-training',
         routingEvidence: planningReasoning
       });
     } catch (error) {
