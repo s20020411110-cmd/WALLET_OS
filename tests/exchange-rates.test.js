@@ -44,3 +44,24 @@ test('checks the inline application script for JavaScript syntax errors', () => 
     assert.doesNotThrow(() => new vm.Script(script, { filename: 'index.html:inline-script' }));
   }
 });
+
+test('WALLET OS uses Supabase Auth and the public publishable key', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /@supabase\/supabase-js@2\.119\.0/);
+  assert.match(html, /SUPABASE_PUBLISHABLE_KEY\s*=\s*['"]sb_publishable_/);
+  assert.match(html, /signInWithPassword\(/);
+  assert.match(html, /auth\.signUp\(/);
+  assert.match(html, /auth\.getSession\(/);
+  assert.doesNotMatch(html, /SUPABASE_SERVICE_ROLE|service_role_key|sb_secret_/i);
+});
+
+test('cloud financial writes use the secure posting RPC and preserve a local import backup', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /function cloudPostTransaction\(/);
+  assert.match(html, /post_financial_transaction/);
+  assert.match(html, /p_idempotency_key:\s*cloudKey\(/);
+  assert.match(html, /wos_pre_cloud_backup_/);
+  assert.match(html, /function cloudImportLocal\(/);
+  assert.match(html, /CLOUD_IMPORT_STATUS='partial'/);
+  assert.match(html, /wallet_account_balances/);
+});
