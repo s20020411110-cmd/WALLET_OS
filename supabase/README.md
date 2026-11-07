@@ -119,7 +119,8 @@ Add that same origin (and any custom production domain later adopted) to the all
 - Accounts are loaded from `wallet_account_balances`; balances are derived from journal lines.
 - Activity, savings goals, loans, investment positions/trades, categories and budgets are loaded from the authenticated user's rows.
 - Income/expense/transfer/savings/loan/investment operations use `post_financial_transaction`.
-- Wallet, savings goal, loan and investment creation use their dedicated RPCs.
+- Wallet, savings goal, loan and investment creation use their dedicated RPCs; the UI forms now write to Supabase when signed in.
+- Gold asset subtypes (bars, coins, jewelry, sovereigns, scrap, other) are persisted in `investment_assets.asset_subtype` through `create_investment_asset_v3`.
 - Budgets use an owner-scoped upsert with period type/week fields.
 - Profile name, base currency and language sync to the user's `profiles` row.
 
@@ -137,10 +138,10 @@ Add that same origin (and any custom production domain later adopted) to the all
 - Market quote persistence/ingestion for the FX and gold quote tables is not yet wired to the existing client-side market feeds.
 
 ### Deployment status
-- The repository is linked to the separate Vercel project `wallet-os` (team `s20020411110-8096`).
-- Latest production deployment `dpl_36hP8Hw5U1MfgmhLzCXgViMeHc9L` is `READY` for commit `a1723019e4c9ae0ef49f9867f7792765df31ee0c`; the latest code update is redeploying automatically after each main-branch push.
-- Production deployment URLs are public; SSO protection remains enabled for preview deployments.
-- Project URL: https://wallet-os-s20020411110-8096.vercel.app
+- Repository: `s20020411110-cmd/WALLET_OS`, branch `main`; linked to the separate Vercel project `wallet-os`.
+- Stable production URL: https://wallet-os-s20020411110-8096.vercel.app
+- Production deploys are served without Vercel SSO; preview deployments remain SSO-protected.
+- Each push to `main` starts an automatic production build. Verify the latest build and GitHub Actions run after changes.
 
 ## Remaining integration work
 
