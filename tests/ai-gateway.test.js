@@ -51,7 +51,7 @@ test('AI Gateway proxy blocks prompt training and returns the model response', a
       return new Response(JSON.stringify({
         model: 'google/gemini-3.1-flash-lite',
         choices: [{ message: { content: 'WALLET OS connection OK' } }],
-        providerMetadata: { gateway: { routing: { planningReasoning: 'ZDR requested; compliant provider selected.' } } }
+        providerMetadata: { gateway: { routing: { planningReasoning: 'No prompt training requested; compliant provider selected.' } } }
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
     throw new Error('Unexpected URL: ' + String(url));
@@ -74,7 +74,7 @@ test('AI Gateway proxy blocks prompt training and returns the model response', a
     assert.equal(res.body.reply, 'WALLET OS connection OK');
     assert.equal(res.body.model, 'google/gemini-3.1-flash-lite');
     assert.equal(res.body.privacyMode, 'no-prompt-training');
-    assert.match(res.body.routingEvidence, /ZDR requested/);
+    assert.match(res.body.routingEvidence, /No prompt training requested/);
 
     const authCall = requests.find(x => x.url.endsWith('/auth/v1/user'));
     assert.equal(authCall.options.headers.apikey, 'sb_publishable_wlBi2KLoDCh0o8K_HbAArQ_O9uy-NLj');
@@ -126,4 +126,36 @@ test('gold hero card follows the active theme and remains compact', () => {
   assert.match(html, /const AI_GATEWAY_MODEL='google\/gemini-3\.1-flash-lite'/);
   assert.match(html, /provider:'vercel',model:AI_GATEWAY_MODEL/);
   assert.match(html, /Vercel AI Gateway/);
+});
+
+
+test('AI Gateway health check verifies the OIDC model endpoint without generating text', async () => {
+  const originalFetch = global.fetch;
+  let captured;
+  global.fetch = async (url, options = {}) => {
+    captured = { url: String(url), options };
+    return new Response(JSON.stringify({
+      data: [
+        { provider: 'google', has_no_training: true },
+        { provider: 'vertex', has_no_training: false }
+      ]
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  try {
+    const res = makeResponse();
+    await aiHandler(makeRequest({
+      method: 'GET',
+      body: {},
+      headers: { 'x-vercel-oidc-token': 'test-vercel-oidc-token' }
+    }), res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.ok, true);
+    assert.equal(res.body.gateway, 'reachable');
+    assert.equal(res.body.model, 'google/gemini-3.1-flash-lite');
+    assert.equal(res.body.noPromptTrainingEndpoints, 1);
+    assert.match(captured.url, /models\/google\/gemini-3\.1-flash-lite\/endpoints$/);
+    assert.equal(captured.options.headers.Authorization, 'Bearer test-vercel-oidc-token');
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
