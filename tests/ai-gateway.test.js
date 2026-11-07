@@ -10,6 +10,7 @@ function makeResponse() {
     setHeader(name, value) { this.headers[name.toLowerCase()] = value; return this; },
     status(code) { this.statusCode = code; return this; },
     json(value) { this.body = value; return this; }
+    end() { this.ended = true; return this; }
   };
 }
 
@@ -200,6 +201,63 @@ test('AI Gateway rejects requests when no no-training provider is available', as
     assert.equal(res.statusCode, 400);
     assert.equal(res.body.code, 'NO_TRAINING_UNAVAILABLE');
     assert.match(res.body.error, /No providers available/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+
+test('Capacitor Android preflight is allowed only from the bundled app origin', async () => {
+  const native = makeResponse();
+  await aiHandler({
+    method: 'OPTIONS',
+    url: '/api/ai',
+    headers: {
+      host: 'wallet.test',
+      origin: 'https://localhost',
+      'access-control-request-method': 'POST',
+      'access-control-request-headers': 'authorization,content-type'
+    }
+  }, native);
+  assert.equal(native.statusCode, 204);
+  assert.equal(native.headers['access-control-allow-origin'], 'https://localhost');
+  assert.match(native.headers['access-control-allow-methods'], /POST/);
+  assert.match(native.headers['access-control-allow-headers'], /Authorization/);
+
+  const attacker = makeResponse();
+  await aiHandler({
+    method: 'OPTIONS',
+    url: '/api/ai',
+    headers: { host: 'wallet.test', origin: 'https://attacker.test' }
+  }, attacker);
+  assert.equal(attacker.statusCode, 403);
+});
+
+test('AI API accepts the explicitly configured native app origin', async () => {
+  const originalFetch = global.fetch;
+  let requestedUrl = '';
+  global.fetch = async url => {
+    requestedUrl = String(url);
+    return new Response(JSON.stringify({
+      model: 'gpt-test',
+      choices: [{ message: { content: 'native connection OK' } }]
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  try {
+    const res = makeResponse();
+    await aiHandler(makeRequest({
+      body: {
+        provider: 'openai',
+        apiKey: 'synthetic-test-key',
+        model: 'gpt-test',
+        messages: [{ role: 'user', content: 'synthetic test' }]
+      },
+      headers: { origin: 'https://localhost' }
+    }), res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.reply, 'native connection OK');
+    assert.equal(res.headers['access-control-allow-origin'], 'https://localhost');
+    assert.equal(requestedUrl, 'https://api.openai.com/v1/chat/completions');
   } finally {
     global.fetch = originalFetch;
   }
