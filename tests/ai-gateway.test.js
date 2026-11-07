@@ -39,6 +39,8 @@ test('AI Gateway proxy requires a same-origin, authenticated WALLET OS session',
 
 test('AI Gateway proxy blocks prompt training and returns the model response', async () => {
   const originalFetch = global.fetch;
+  const originalOidc = process.env.VERCEL_OIDC_TOKEN;
+  process.env.VERCEL_OIDC_TOKEN = 'test-runtime-vercel-oidc-token';
   const requests = [];
   global.fetch = async (url, options = {}) => {
     requests.push({ url: String(url), options });
@@ -65,8 +67,7 @@ test('AI Gateway proxy blocks prompt training and returns the model response', a
         messages: [{ role: 'user', content: 'Reply with exactly: WALLET OS connection OK' }]
       },
       headers: {
-        authorization: 'Bearer test-supabase-access-token',
-        'x-vercel-oidc-token': 'test-vercel-oidc-token'
+        authorization: 'Bearer test-supabase-access-token'
       }
     }), res);
 
@@ -81,7 +82,7 @@ test('AI Gateway proxy blocks prompt training and returns the model response', a
     assert.equal(authCall.options.headers.Authorization, 'Bearer test-supabase-access-token');
 
     const modelCall = requests.find(x => x.url.endsWith('/v1/chat/completions'));
-    assert.equal(modelCall.options.headers.Authorization, 'Bearer test-vercel-oidc-token');
+    assert.equal(modelCall.options.headers.Authorization, 'Bearer test-runtime-vercel-oidc-token');
     const payload = JSON.parse(modelCall.options.body);
     assert.equal(payload.model, 'google/gemini-3.1-flash-lite');
     assert.equal(payload.providerOptions.gateway.disallowPromptTraining, true);
@@ -90,6 +91,8 @@ test('AI Gateway proxy blocks prompt training and returns the model response', a
     assert.equal(payload.messages[0].content, 'Reply with exactly: WALLET OS connection OK');
   } finally {
     global.fetch = originalFetch;
+    if (originalOidc === undefined) delete process.env.VERCEL_OIDC_TOKEN;
+    else process.env.VERCEL_OIDC_TOKEN = originalOidc;
   }
 });
 
