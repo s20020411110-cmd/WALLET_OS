@@ -862,8 +862,8 @@ document.addEventListener('pointermove',e=>{const c=e.target.closest&&e.target.c
 addEventListener('hashchange',()=>{Q='';FIRST=1;PREV={};scrollTo(0,0);build()});live();setInterval(()=>{if(!document.hidden)live()},30000);{const l=document.createElement('link');l.rel='icon';l.href='data:image/svg+xml,'+encodeURIComponent(LIT(LG(32)));document.head.append(l)}
 (async function bootCloud(){try{
  if(!SB){if(!S.localGuest)S.auth=0;build();toast(_('تعذر تحميل مكتبة الاتصال السحابي. تحقق من الشبكة.|Cloud library could not load. Check your network.'));return;}
- const {data,error}=await SB.auth.getSession();if(error)throw error;
  SB.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'&&CLOUD_USER){cloudClearCache();build();}if(event==='PASSWORD_RECOVERY')setTimeout(()=>cloudShowPasswordRecovery(),0);});
+ const {data,error}=await SB.auth.getSession();if(error)throw error;
  if(data&&data.session&&data.session.user){await cloudConnectUser(data.session.user);S.seen=1;S.onb=1;location.hash='#/home';build();}
  else{CLOUD_USER=null;if(!S.localGuest)S.auth=0;build();}
 }catch(err){CLOUD_USER=null;CLOUD_READY=false;if(!S.localGuest)S.auth=0;build();toast(_('تعذر الاتصال بقاعدة البيانات:|Database connection failed:')+' '+(err.message||String(err)));}})();
