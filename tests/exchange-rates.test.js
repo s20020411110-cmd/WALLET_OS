@@ -228,3 +228,62 @@ test('offline sync retries a lost response with the same idempotency key', async
   assert.equal(calls[1].args.p_request_key, firstKey);
   assert.equal(api.cloudQueueLoad().length, 0);
 });
+
+
+function makeGoldChartHelpers(html, state = { gold: { h: [] } }) {
+  const start = html.indexOf('function goldRecordObservation(');
+  const end = html.indexOf('\nconst kc=', start);
+  assert.ok(start >= 0 && end > start, 'gold trend chart helpers should exist');
+  const source = html.slice(start, end);
+  const factory = new Function(
+    'sm', 'LOC', 'fm', '_', 'S',
+    'let seq = 0, GOLD_RANGE = 30, GOLD_SELECTED = -1;\n' +
+      source +
+      '\nreturn { goldRecordObservation, goldTrendMetrics, goldTrendChart };'
+  );
+  return factory(
+    points => points.map((point, i) => (i ? 'L' : 'M') + point[0] + ',' + point[1]).join(' '),
+    () => 'en-US',
+    (value, currency) => currency === 'USD' ? '$' + Number(value).toFixed(2) : String(value),
+    value => value.split('|')[1] || value.split('|')[0],
+    state
+  );
+}
+
+test('gold movement metrics distinguish upward, downward, flat and insufficient histories', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const { goldTrendMetrics } = makeGoldChartHelpers(html);
+  assert.equal(goldTrendMetrics([{ usd: 4000 }, { usd: 4050 }]).direction, 1);
+  assert.equal(goldTrendMetrics([{ usd: 4072 }, { usd: 4050 }]).direction, -1);
+  assert.equal(goldTrendMetrics([{ usd: 4072 }, { usd: 4072 }]).direction, 0);
+  assert.equal(goldTrendMetrics([{ usd: 4072 }]).direction, 0);
+  assert.equal(goldTrendMetrics([{ usd: 4000 }, { usd: 4050 }]).percent, 1.25);
+});
+
+test('gold trend chart changes to green or red and exposes selectable ranges and readings', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const { goldTrendChart } = makeGoldChartHelpers(html);
+  const rising = goldTrendChart({ history: [{ usd: 4000 }, { usd: 4050 }], usd: 4050, src: 'xaus' });
+  const falling = goldTrendChart({ history: [{ usd: 4072 }, { usd: 4050 }], usd: 4050, src: 'xaus' });
+  const single = goldTrendChart({ history: [{ usd: 4072 }], usd: 4072, src: 'xaus' });
+  assert.ok(rising.includes('--gold-trend:#16a34a'));
+  assert.ok(rising.includes('اتجاه صاعد'));
+  assert.ok(rising.includes('data-a="goldRange"'));
+  assert.ok(rising.includes('data-a="goldPoint"'));
+  assert.ok(falling.includes('--gold-trend:#dc2626'));
+  assert.ok(falling.includes('اتجاه هابط'));
+  assert.ok(single.includes('Trend not established yet'));
+  assert.ok(single.includes('At least two observations'));
+});
+
+test('gold price observations preserve legacy values and record observation time and source', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const state = { gold: { h: [4000, 4010] } };
+  const { goldRecordObservation } = makeGoldChartHelpers(html, state);
+  goldRecordObservation(4020, '2026-11-07T10:02:00.000Z', 'xaus');
+  assert.deepEqual(state.gold.h, [4000, 4010, 4020]);
+  assert.equal(state.gold.history.length, 3);
+  assert.equal(state.gold.history[0].observedAt, null);
+  assert.equal(state.gold.history[2].priceAt, '2026-11-07T10:02:00.000Z');
+  assert.equal(state.gold.history[2].source, 'xaus');
+});
