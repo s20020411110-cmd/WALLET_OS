@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
 const { parseRatesFromHtml } = require('../api/exchange-rates');
 
 const fixture = `
@@ -27,4 +30,17 @@ test('parses the Aden buy/sell rate table and thousands separators', () => {
 
 test('rejects incomplete or unrecognized source tables', () => {
   assert.equal(parseRatesFromHtml('<table><tr><td>USD</td><td>1500</td></tr></table>'), null);
+});
+
+
+test('checks the inline application script for JavaScript syntax errors', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)]
+    .map(match => match[1])
+    .filter(script => script.trim());
+
+  assert.ok(scripts.length > 0, 'index.html should contain an inline application script');
+  for (const script of scripts) {
+    assert.doesNotThrow(() => new vm.Script(script, { filename: 'index.html:inline-script' }));
+  }
 });
