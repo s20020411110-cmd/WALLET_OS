@@ -115,15 +115,16 @@ For multi-device changes, sync each device before switching to another one. Ledg
 
 ## AI assistant — Vercel AI Gateway
 
-The built-in assistant can use the managed Vercel AI Gateway route with the model `google/gemini-3.1-flash-lite`. In that mode:
+The built-in assistant uses the managed Vercel AI Gateway route with `google/gemini-3.1-flash-lite`. In this mode:
+
 - The browser sends the signed-in user's current Supabase access token to `/api/ai`; the server verifies it against Supabase Auth before accepting a prompt.
 - The Vercel Function uses its request-scoped `x-vercel-oidc-token` to authenticate to AI Gateway. No long-lived provider or Gateway key is stored in the browser or repository.
-- The server requires request-level Zero Data Retention (`providerOptions.gateway.zeroDataRetention: true`). AI Gateway must find a provider for the selected model that supports ZDR; otherwise the request is rejected rather than sent to a non-compliant provider.
-- The built-in Gateway route is limited to 20 requests per minute per signed-in user in each running function instance, and each request is limited to 14 messages / 48,000 characters. Network access and an active cloud sign-in are required.
-- AI Gateway per-request ZDR is available on Vercel Pro and Enterprise plans. If the team plan does not support it, the assistant reports the failure and does not silently fall back to a provider without ZDR.
-- OpenAI, OpenRouter and Groq remain available as optional user-managed API-key providers. Their data-retention policies are controlled by those providers and are not covered by the Gateway ZDR requirement.
-- The connection-test action sends a synthetic test phrase only. The actual financial snapshot is included only when the user sends a question to the assistant. No AI API key is embedded in the frontend.
+- Each Gateway request sets `providerOptions.gateway.disallowPromptTraining: true`. AI Gateway must route to an endpoint with a no-prompt-training agreement; otherwise the request is rejected.
+- **No-prompt-training is not Zero Data Retention.** The provider may retain request data under its own terms. Per-request ZDR requires Vercel Pro or Enterprise; this project team is currently on Hobby, so the app does not claim ZDR and does not attempt to bypass the plan restriction.
+- The built-in Gateway route is limited to 20 requests per minute per signed-in user in each running function instance; each request is limited to 14 messages / 48,000 characters. Network access and an active cloud sign-in are required.
+- OpenAI, OpenRouter and Groq remain available as optional user-managed API-key providers. Their retention and training policies are controlled by those providers, not by the Gateway route.
+- The connection-test action sends a synthetic test phrase only. The financial snapshot is included only when the user sends a question to the assistant. No AI API key is embedded in the frontend.
 
 The function exposes `GET /api/ai?health=1` for an OIDC connectivity and model-endpoint check without generating text or submitting financial data. A live model response can be tested from **Settings → AI configuration → Test connection** after signing in.
 
-Model pricing is variable and charged by the Gateway/provider account. Check the Vercel AI Gateway model catalog and usage dashboard before enabling production usage at scale.
+Model pricing is variable and billed through the Gateway/provider account. Check the current model catalog and usage dashboard before enabling production usage at scale.
