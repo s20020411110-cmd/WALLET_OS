@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const exchangeRatesHandler = require('../api/exchange-rates');
 const { parseRatesFromHtml } = require('../api/exchange-rates');
 
 const fixture = `
@@ -369,4 +370,45 @@ test('investment page binds the lower chart and KPI to total realized plus unrea
   assert.match(html, /const unrealized=p\.v-p\.c,total=unrealized\+p\.pl/);
   assert.match(html, /interval=1d/);
   assert.match(html, /symbol=xau&range=3mo&interval=1d/);
+});
+
+
+test('exchange-rate API exposes the response only to the configured Capacitor origin', async () => {
+  const response = () => ({
+    statusCode: 200,
+    headers: {},
+    body: null,
+    setHeader(name, value) { this.headers[name.toLowerCase()] = value; return this; },
+    status(code) { this.statusCode = code; return this; },
+    json(value) { this.body = value; return this; },
+    end() { this.ended = true; return this; }
+  });
+  const originalFetch = global.fetch;
+  let fetchCount = 0;
+  global.fetch = async () => {
+    fetchCount += 1;
+    return new Response(fixture, { status: 200, headers: { 'Content-Type': 'text/html' } });
+  };
+  try {
+    const preflight = response();
+    await exchangeRatesHandler({
+      method: 'OPTIONS',
+      headers: { host: 'wallet.test', origin: 'https://localhost' }
+    }, preflight);
+    assert.equal(preflight.statusCode, 204);
+    assert.equal(preflight.headers['access-control-allow-origin'], 'https://localhost');
+    assert.equal(fetchCount, 0);
+
+    const get = response();
+    await exchangeRatesHandler({
+      method: 'GET',
+      headers: { host: 'wallet.test', origin: 'https://localhost' }
+    }, get);
+    assert.equal(get.statusCode, 200);
+    assert.equal(get.headers['access-control-allow-origin'], 'https://localhost');
+    assert.ok(get.body.rates.USD.buy > 0);
+    assert.equal(fetchCount, 1);
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
