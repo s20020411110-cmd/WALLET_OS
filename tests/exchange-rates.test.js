@@ -117,3 +117,109 @@ test('PWA shell caches only app files and the pinned Supabase client, not privat
   assert.ok(sw.includes("url.pathname.startsWith('/api/')"));
   assert.ok(sw.includes('supabase-js@2.119.0'));
 });
+
+
+function makeOfflineSyncHarness(html, rpcImpl) {
+  const start = html.indexOf('let CLOUD_OFFLINE=');
+  const end = html.indexOf('async function cloudRpc', start);
+  assert.ok(start >= 0 && end > start, 'offline sync engine should be present');
+  const engine = html.slice(start, end);
+  const values = new Map();
+  let nextId = 0;
+  let refreshCount = 0;
+  const localStorage = {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(key, String(value)); },
+    removeItem(key) { values.delete(key); }
+  };
+  const calls = [];
+  const sandbox = {
+    navigator: { onLine: false },
+    localStorage,
+    document: { querySelector() { return null; } },
+    crypto: { randomUUID() { nextId += 1; return 'offline-id-' + nextId; } },
+    CLOUD_USER: { id: 'owner-1', email: 'offline@example.com' },
+    CLOUD_PROFILE_FP: '',
+    CLOUD_CATEGORY_ROWS: [],
+    CLOUD_CATEGORY_IDS: {},
+    S: { accs: [], tx: [], goals: [], loans: [], inv: [], bud: [], rates: { SAR: 1 }, base: 'SAR' },
+    cloudCategoryIndex() { return 0; },
+    cloudBudgetPeriod() { return { period_year: 2026, period_month: 11, period_type: 'm', period_week: 0 }; },
+    cloudProfileFingerprint() { return 'profile-fingerprint'; },
+    save() {},
+    async cloudRefresh() { refreshCount += 1; },
+    async cloudLoadCategories() {},
+    SB: {
+      auth: {
+        async getSession() {
+          return { data: { session: { user: { id: 'owner-1', email: 'offline@example.com' } } }, error: null };
+        }
+      },
+      async rpc(name, args) {
+        calls.push({ name, args: JSON.parse(JSON.stringify(args)) });
+        return rpcImpl(name, args);
+      }
+    },
+    __calls: calls,
+    __refreshCount: () => refreshCount
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(engine + '\\nthis.__offlineApi = { cloudQueueRpc, cloudQueueLoad, cloudSyncPending, cloudMapLoad, isOffline: () => CLOUD_OFFLINE };', sandbox);
+  return { sandbox, api: sandbox.__offlineApi, calls, localStorage };
+}
+
+test('offline queue syncs dependent financial postings in order and maps temporary IDs', async () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const harness = makeOfflineSyncHarness(html, async name => ({
+    data: name === 'create_wallet_account' ? 'remote-wallet-id' : 'remote-transaction-id',
+    error: null
+  }));
+  const { sandbox, api, calls } = harness;
+  const localWallet = api.cloudQueueRpc('create_wallet_account', {
+    p_name: 'Cash', p_kind: 'cash', p_currency_code: 'SAR', p_request_key: 'wallet-key'
+  });
+  api.cloudQueueRpc('post_financial_transaction', {
+    p_type: 'expense', p_amount: 25, p_currency_code: 'SAR',
+    p_account_id: localWallet, p_idempotency_key: 'transaction-key',
+    p_category_id: 'category-id', p_occurred_on: '2026-11-07'
+  });
+  assert.equal(api.cloudQueueLoad().length, 2);
+  sandbox.navigator.onLine = true;
+  assert.equal(await api.cloudSyncPending(true, true), true);
+  assert.deepEqual(calls.map(call => call.name), ['create_wallet_account', 'post_financial_transaction']);
+  assert.equal(calls[1].args.p_account_id, 'remote-wallet-id');
+  assert.equal(api.cloudQueueLoad().length, 0);
+  assert.equal(api.cloudMapLoad()[localWallet], 'remote-wallet-id');
+  assert.equal(sandbox.__refreshCount(), 1);
+});
+
+test('offline sync retries a lost response with the same idempotency key', async () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let failOnce = true;
+  const harness = makeOfflineSyncHarness(html, async name => {
+    if (failOnce) {
+      failOnce = false;
+      throw new TypeError('Failed to fetch');
+    }
+    return { data: name === 'create_wallet_account' ? 'remote-wallet-id' : 'remote-transaction-id', error: null };
+  });
+  const { sandbox, api, calls } = harness;
+  api.cloudQueueRpc('create_wallet_account', {
+    p_name: 'Cash', p_kind: 'cash', p_currency_code: 'SAR', p_request_key: 'stable-wallet-key'
+  });
+  api.cloudQueueRpc('post_financial_transaction', {
+    p_type: 'expense', p_amount: 25, p_currency_code: 'SAR',
+    p_account_id: 'local-offline-id', p_idempotency_key: 'stable-transaction-key',
+    p_category_id: 'category-id', p_occurred_on: '2026-11-07'
+  });
+  sandbox.navigator.onLine = true;
+  assert.equal(await api.cloudSyncPending(true, false), false);
+  assert.equal(api.isOffline(), true);
+  assert.equal(api.cloudQueueLoad().length, 2);
+  assert.equal(api.cloudQueueLoad()[0].attempts, 1);
+  const firstKey = api.cloudQueueLoad()[0].args.p_request_key;
+  assert.equal(await api.cloudSyncPending(true, false), true);
+  assert.equal(calls[0].args.p_request_key, firstKey);
+  assert.equal(calls[1].args.p_request_key, firstKey);
+  assert.equal(api.cloudQueueLoad().length, 0);
+});
