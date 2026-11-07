@@ -693,10 +693,12 @@ async function cloudRefresh(){
  }finally{CLOUD_LOADING=false;}
 }
 async function cloudConnectUser(user){
- const sameDeviceOwner=S.cloudOwnerId===user.id;
+ const cachedCloudIds=(S.accs||[]).some(a=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(a.id)));
+ const sameCloudEmail=!!(S.user&&S.user.email&&user.email&&S.user.email.toLowerCase()===user.email.toLowerCase()&&!S.user.h&&!S.localGuest);
+ const sameDeviceOwner=S.cloudOwnerId===user.id||cachedCloudIds||sameCloudEmail;
  CLOUD_USER=user;CLOUD_READY=false;const {data:profile,error}=await SB.from('profiles').select('display_name,base_currency,language').eq('id',user.id).single();if(error)throw error;
  if(profile){S.name=profile.display_name||user.user_metadata?.full_name||user.email||'';S.base=profile.base_currency||S.base;S.lang=profile.language||S.lang;}
- const sourceId=cloudImportSourceId();cloudBackup(user.id,sourceId);
+ const sourceId=cloudImportSourceId();if(!sameDeviceOwner)cloudBackup(user.id,sourceId);
  const tables=['wallet_accounts','transactions','savings_goals','loans','investment_assets'],counts=await Promise.all(tables.map(t=>SB.from(t).select('id',{count:'exact',head:true})));const ce=counts.find(x=>x.error);if(ce)throw ce.error;
  const hasRemote=counts.some(x=>(x.count||0)>0);try{CLOUD_IMPORT_STATUS=localStorage.getItem('wos_cloud_import_'+user.id)||''}catch(e){CLOUD_IMPORT_STATUS='';}
  if(CLOUD_IMPORT_STATUS==='running'||CLOUD_IMPORT_STATUS==='partial'){
