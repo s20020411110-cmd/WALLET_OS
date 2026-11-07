@@ -35,7 +35,7 @@ test('rejects incomplete or unrecognized source tables', () => {
 
 test('checks the inline application script for JavaScript syntax errors', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)]
+  const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
     .map(match => match[1])
     .filter(script => script.trim());
 
