@@ -133,39 +133,45 @@ function makeOfflineSyncHarness(html, rpcImpl) {
     removeItem(key) { values.delete(key); }
   };
   const calls = [];
-  const sandbox = {
-    navigator: { onLine: false },
-    localStorage,
-    document: { querySelector() { return null; } },
-    crypto: { randomUUID() { nextId += 1; return 'offline-id-' + nextId; } },
-    CLOUD_USER: { id: 'owner-1', email: 'offline@example.com' },
-    CLOUD_PROFILE_FP: '',
-    CLOUD_CATEGORY_ROWS: [],
-    CLOUD_CATEGORY_IDS: {},
-    S: { accs: [], tx: [], goals: [], loans: [], inv: [], bud: [], rates: { SAR: 1 }, base: 'SAR' },
-    cloudCategoryIndex() { return 0; },
-    cloudBudgetPeriod() { return { period_year: 2026, period_month: 11, period_type: 'm', period_week: 0 }; },
-    cloudProfileFingerprint() { return 'profile-fingerprint'; },
-    save() {},
-    async cloudRefresh() { refreshCount += 1; },
-    async cloudLoadCategories() {},
-    SB: {
-      auth: {
-        async getSession() {
-          return { data: { session: { user: { id: 'owner-1', email: 'offline@example.com' } } }, error: null };
-        }
-      },
-      async rpc(name, args) {
-        calls.push({ name, args: JSON.parse(JSON.stringify(args)) });
-        return rpcImpl(name, args);
+  const navigator = { onLine: false };
+  let refreshCount = 0;
+  const SB = {
+    auth: {
+      async getSession() {
+        return { data: { session: { user: { id: 'owner-1', email: 'offline@example.com' } } }, error: null };
       }
     },
-    __calls: calls,
-    __refreshCount: () => refreshCount
+    async rpc(name, args) {
+      calls.push({ name, args: JSON.parse(JSON.stringify(args)) });
+      return rpcImpl(name, args);
+    }
   };
-  vm.createContext(sandbox);
-  vm.runInContext(engine + '\nthis.__offlineApi = { cloudQueueRpc, cloudQueueLoad, cloudSyncPending, cloudMapLoad, isOffline: () => CLOUD_OFFLINE };', sandbox);
-  return { sandbox, api: sandbox.__offlineApi, calls, localStorage };
+  const factory = new Function(
+    'navigator', 'localStorage', 'document', 'crypto', 'CLOUD_USER',
+    'CLOUD_PROFILE_FP', 'CLOUD_CATEGORY_ROWS', 'CLOUD_CATEGORY_IDS', 'S',
+    'cloudCategoryIndex', 'cloudBudgetPeriod', 'cloudProfileFingerprint',
+    'save', 'cloudRefresh', 'SB', 'cloudLoadCategories',
+    engine + '\nreturn { cloudQueueRpc, cloudQueueLoad, cloudSyncPending, cloudMapLoad, isOffline: () => CLOUD_OFFLINE };'
+  );
+  const api = factory(
+    navigator,
+    localStorage,
+    { querySelector() { return null; } },
+    { randomUUID() { nextId += 1; return 'offline-id-' + nextId; } },
+    { id: 'owner-1', email: 'offline@example.com' },
+    '',
+    [],
+    {},
+    { accs: [], tx: [], goals: [], loans: [], inv: [], bud: [], rates: { SAR: 1 }, base: 'SAR' },
+    () => 0,
+    () => ({ period_year: 2026, period_month: 11, period_type: 'm', period_week: 0 }),
+    () => 'profile-fingerprint',
+    () => {},
+    async () => { refreshCount += 1; },
+    SB,
+    async () => {}
+  );
+  return { navigator, api, calls, getRefreshCount: () => refreshCount };
 }
 
 test('offline queue syncs dependent financial postings in order and maps temporary IDs', async () => {
@@ -174,7 +180,7 @@ test('offline queue syncs dependent financial postings in order and maps tempora
     data: name === 'create_wallet_account' ? 'remote-wallet-id' : 'remote-transaction-id',
     error: null
   }));
-  const { sandbox, api, calls } = harness;
+  const { navigator, api, calls } = harness;
   const localWallet = api.cloudQueueRpc('create_wallet_account', {
     p_name: 'Cash', p_kind: 'cash', p_currency_code: 'SAR', p_request_key: 'wallet-key'
   });
@@ -184,13 +190,13 @@ test('offline queue syncs dependent financial postings in order and maps tempora
     p_category_id: 'category-id', p_occurred_on: '2026-11-07'
   });
   assert.equal(api.cloudQueueLoad().length, 2);
-  sandbox.navigator.onLine = true;
+  navigator.onLine = true;
   assert.equal(await api.cloudSyncPending(true, true), true);
   assert.deepEqual(calls.map(call => call.name), ['create_wallet_account', 'post_financial_transaction']);
   assert.equal(calls[1].args.p_account_id, 'remote-wallet-id');
   assert.equal(api.cloudQueueLoad().length, 0);
   assert.equal(api.cloudMapLoad()[localWallet], 'remote-wallet-id');
-  assert.equal(sandbox.__refreshCount(), 1);
+  assert.equal(harness.getRefreshCount(), 1);
 });
 
 test('offline sync retries a lost response with the same idempotency key', async () => {
