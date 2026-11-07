@@ -9,7 +9,7 @@ function makeResponse() {
     body: null,
     setHeader(name, value) { this.headers[name.toLowerCase()] = value; return this; },
     status(code) { this.statusCode = code; return this; },
-    json(value) { this.body = value; return this; }
+    json(value) { this.body = value; return this; },
     end() { this.ended = true; return this; }
   };
 }
