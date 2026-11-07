@@ -639,12 +639,12 @@ async function live(man){
  try{
   const x=await jf('https://xaus.com/api/v1/spot?currency=USD&unit=gram&compact=1');
   const oz=Number(x&&x.spot_usd_oz),gram=Number(x&&(x.per_gram_usd||(x.xau&&x.xau.price)));
-  const state=x&&x.data_state&&x.data_state.status||'fresh',stamp=x&&(x.updated_at||(x.data_state&&x.data_state.as_of));
+  const rawState=x&&x.data_state&&x.data_state.status||'unavailable',stamp=x&&(x.price_as_of||(x.data_state&&x.data_state.as_of)||x.updated_at),age=stamp?Date.now()-Date.parse(stamp):Infinity,state=rawState==='fresh'&&Number.isFinite(age)&&age>180000?'stale':rawState;
   if(oz>0&&gram>0&&state!=='unavailable')gold={oz,gram,state,stamp:stamp||new Date().toISOString(),source:'xaus'};
  }catch(e){}
  if(!gold)try{
   const x=await jf('https://api.gold-api.com/price/XAU'),oz=Number(x&&x.price);
-  if(oz>0){const stamp=x.updatedAt||x.updated_at||new Date().toISOString(),age=Date.now()-Date.parse(stamp);gold={oz,gram:oz/OZ,state:!Number.isFinite(age)||age<=120000?'fresh':'stale',stamp,source:'gold-api'}}
+  if(oz>0){const stamp=x.updatedAt||x.updated_at||null,age=stamp?Date.now()-Date.parse(stamp):Infinity;gold={oz,gram:oz/OZ,state:stamp&&Number.isFinite(age)&&age>=-30000&&age<=120000?'fresh':'stale',stamp:stamp||new Date().toISOString(),source:'gold-api'}}
  }catch(e){}
  if(gold){
   const old=S.gold.usd;
@@ -738,5 +738,5 @@ navPos();
 cnt(p);FIRST=0;if(LASTID)setTimeout(()=>LASTID=0,2600);if(NA)$('#pg').classList.add('na');document.querySelectorAll("#pg>*").forEach((e,i)=>e.style.setProperty("--i",Math.min(i,8)));scrollTo(0,y)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&A[b.dataset.a]){const v=b.dataset.v;try{navigator.vibrate(6)}catch(e){}A[b.dataset.a](v,b)}});
 document.addEventListener('pointermove',e=>{const c=e.target.closest&&e.target.closest('.cd');if(c){const q=c.getBoundingClientRect();c.style.setProperty('--mx',e.clientX-q.left+'px');c.style.setProperty('--my',e.clientY-q.top+'px')}});document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key=='k'){e.preventDefault();const i=$('#gs');i&&i.focus()}});document.addEventListener('mouseover',e=>{const b=e.target.closest('.hv');if(b)A.hv(b.dataset.v)});
-addEventListener('hashchange',()=>{Q='';FIRST=1;PREV={};scrollTo(0,0);build()});live();setInterval(()=>{if(LV.fail<3&&!document.hidden)live()},30000);{const l=document.createElement('link');l.rel='icon';l.href='data:image/svg+xml,'+encodeURIComponent(LIT(LG(32)));document.head.append(l)}build();
+addEventListener('hashchange',()=>{Q='';FIRST=1;PREV={};scrollTo(0,0);build()});live();setInterval(()=>{if(!document.hidden)live()},30000);{const l=document.createElement('link');l.rel='icon';l.href='data:image/svg+xml,'+encodeURIComponent(LIT(LG(32)));document.head.append(l)}build();
 </script></body></html>
