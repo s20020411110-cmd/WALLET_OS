@@ -17,4 +17,4 @@ jobs:
         with:
           node-version: 20
       - name: Run parser and application syntax tests
-        run: node --test tests/exchange-rates.test.js
+        run: node --test tests/*.test.js
