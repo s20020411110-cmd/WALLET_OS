@@ -76,3 +76,17 @@ test('cloud import is multi-device safe and password recovery is wired', () => {
   assert.match(html, /PASSWORD_RECOVERY/);
   assert.match(html, /auth\.updateUser\(\{password:/);
 });
+
+test('cloud creation forms use database RPCs instead of local-only writes', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  for (const name of ['create_wallet_account', 'create_savings_goal_v2', 'create_loan_v2', 'create_investment_asset_v2']) {
+    assert.match(html, new RegExp("cloudRpc\\('" + name + "'"));
+  }
+  assert.match(html, /async v=>\{if\(!\(\+v\.l>0\)\).*cloudUpsertBudget/);
+  assert.match(html, /function cloudAssetType\(/);
+});
+
+test('income and expense form types are translated to the ledger RPC contract', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /if\(t==='inc'\|\|t==='exp'\)\{type=t==='inc'\?'income':'expense';cat=cloudCategoryId\(type,v\.cat\);\}/);
+});
