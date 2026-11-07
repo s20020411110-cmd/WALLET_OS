@@ -7,18 +7,19 @@ This repository builds the existing WALLET OS application as an Android APK usin
 - Display name: WALLET OS
 - Android application ID: `com.walletos.finance`
 - Runtime: Capacitor 8.6.0
-- Minimum supported Android level: Capacitor's Android 8+ baseline
+- Minimum supported Android level: Android 7.0 / API 24 (Capacitor 8 baseline)
 - Build output: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 The debug APK is installable on an Android device for testing. It is not a Play Store release build and is not signed with a private release keystore.
 
 ## Build from a local checkout
 
-Use Node.js 22.2 or newer, Java 21, Android SDK Platform 36 and the Android build-tools package required by the generated Gradle project.
+Use Node.js 22 or newer, Java 21, Android SDK Platform 36 and the Android build-tools package required by the generated Gradle project. Capacitor 8's local Android Studio workflow requires Android Studio 2025.2.1 or newer.
 
 ```sh
 npm install
 npm test
+npm run android:add   # one time per checkout
 npm run android:build
 ```
 
