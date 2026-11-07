@@ -16,8 +16,12 @@ This is a dedicated project for WALLET OS. It is not the Supabase project used b
 | --- | --- | --- |
 | 20261107152547 | wallet_os_finance_core_v1 | Core finance schema, ledger, RPCs, RLS, starter currencies/categories, views |
 | 20261107152753 | wallet_os_concurrency_and_fk_indexes_v1 | Transaction row locks, same-currency FX fallback, profile base-currency guard, foreign-key indexes |
+| 20261107153427 | wallet_os_app_integration_v2 | Versioned RPCs and schema fields required by browser sync and local-data import |
+| 20261107153651 | wallet_os_wallet_types_v1 | Adds the savings wallet type used by the application |
+| 20261107155054 | wallet_os_gold_subtypes_v1 | Persists the gold item subtype used by the investment UI |
+| 20261107173757 | wallet_os_sync_integrity_hardening_v1 | Composite unique key for budget upserts, unique per-user request keys, serialized goal/loan creation retries |
 
-The two migrations are visible in the hosted Supabase migration history. Their SQL has not yet been pulled into this repository as local migration files; when the Supabase CLI is available, export the hosted history into supabase/migrations/ and commit that exact output before making future schema changes from a local branch.
+All six migrations are visible in the hosted Supabase migration history. Their exact SQL has not yet been exported into this repository as local files under supabase/migrations/. Preserve the hosted migration history as the source of truth; before future local schema work, pull/export the hosted migration SQL using the Supabase CLI, review it against the hosted schema, and commit the exact exported SQL rather than reconstructing migration files from this guide.
 
 ## Data model
 
