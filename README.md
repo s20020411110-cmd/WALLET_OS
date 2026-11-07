@@ -89,10 +89,12 @@ The successful test run produced 11 transactions, 11 journal entries, and 24 jou
 
 Supabase Security Advisor reported no findings after the schema changes. Performance Advisor reported only informational unused-index notices, expected on a new database with no real workload; no unindexed foreign keys remained in the advisor output.
 
-### Important integration boundary
+### Browser application integration
 
-The current browser application still keeps its financial state and its local sign-in flow in browser `localStorage`. The Supabase database is built and validated but is **not yet connected to the browser UI**. Do not treat the current local sign-in as Supabase Auth, and do not enter real financial data expecting it to sync to this database yet.
+The browser app now uses Supabase Auth (email/password sign-up, sign-in, session restore, sign-out and password reset) for cloud accounts. Financial reads use the owner-scoped Supabase tables and balance view; account, goal, loan, investment and budget creation are routed through the database API, and financial operations are posted through the atomic ledger RPC.
 
-The next integration step is to replace the local sign-in with Supabase Auth, map the existing local data model to the database RPCs and read models, and migrate user data only with an explicit import and reconciliation flow. Use only a publishable key in the browser; never expose a Supabase secret or service-role key.
+On first sign-in, when the cloud account has no financial records, the app offers to import the local WALLET OS data. It writes a separate local safety copy first and uses deterministic idempotency keys for imported wallets, products and transactions. A partial import can be retried without duplicating records. Local guest mode remains device-only and does not sync.
 
-See [supabase/README.md](supabase/README.md) for the hosted schema and RPC contract.
+The frontend embeds only the Supabase publishable key. No service-role or secret key is included in the browser source. Posted cloud ledger transactions are intentionally not editable or deletable through the old local UI; corrections need accounting reversal/correction workflows.
+
+See [supabase/README.md](supabase/README.md) for the hosted schema, RPC contract, import mapping and current validation record.
