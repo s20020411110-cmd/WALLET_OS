@@ -411,7 +411,7 @@ const T=(t,y=S.year)=>S.tx.filter(r=>r.t==t&&+r.d.slice(0,4)==y);
 const mon=(t,y=S.year)=>{const a=Array(12).fill(0);T(t,y).forEach(r=>a[+r.d.slice(5,7)-1]+=B(r));return a};
 const upto=(t,i,y=S.year)=>sum(S.tx.filter(r=>r.t==t&&r.d<=`${y}-${pad(i+1)}-31`));
 const eff=(r,id)=>{let k=0,l;if(r.acc==id)k=['inc','sell'].includes(r.t)?1:r.t=='pay'?((l=S.loans.find(z=>z.id==r.ref))&&l.kind=='owed'?1:-1):-1;if(r.t=='trf'&&r.ref==id)k+=1;return k};
-const bal=a=>CLOUD_USER&&Number.isFinite(a.cloudBalance)?a.cloudBalance:S.tx.reduce((s,r)=>s+(r.t=='trf'&&r.ref==a.id?cv(r.ta==null?r.a:r.ta,r.tc||r.c,a.cur):eff(r,a.id)*cv(r.a,r.c,a.cur)),0),balB=a=>cv(bal(a),a.cur);
+const bal=a=>CLOUD_USER&&Number.isFinite(a.cloudBalance)?a.cloudBalance+S.tx.filter(r=>String(r.id).startsWith('local-')).reduce((s,r)=>s+(r.t=='trf'&&r.ref==a.id?cv(r.ta==null?r.a:r.ta,r.tc||r.c,a.cur):eff(r,a.id)*cv(r.a,r.c,a.cur)),0):S.tx.reduce((s,r)=>s+(r.t=='trf'&&r.ref==a.id?cv(r.ta==null?r.a:r.ta,r.tc||r.c,a.cur):eff(r,a.id)*cv(r.a,r.c,a.cur)),0),balB=a=>cv(bal(a),a.cur);
 const paid=l=>sum(S.tx.filter(r=>r.t=='pay'&&r.ref==l.id)),rem=l=>Math.max(0,cv(l.orig,l.cur)-paid(l));
 const LN=()=>S.loans.filter(l=>l.kind!='owed'),OW=()=>S.loans.filter(l=>l.kind=='owed');
 const sv=g=>sum(S.tx.filter(r=>r.t=='sav'&&r.ref==g.id)),savT=()=>Z(S.goals.map(sv));
@@ -677,7 +677,7 @@ async function cloudSyncPending(silent=false,refreshAfter=true){
    }
    queue.shift();cloudQueueSave(queue);
   }
-  CLOUD_OFFLINE=false;CLOUD_SYNC_ERROR='';CLOUD_PROFILE_FP=cloudProfileFingerprint();
+  CLOUD_OFFLINE=false;CLOUD_SYNC_ERROR='';CLOUD_PROFILE_FP=cloudProfileFingerprint();try{if(localStorage.getItem('wos_cloud_import_'+CLOUD_USER.id)==='queued'){localStorage.setItem('wos_cloud_import_'+CLOUD_USER.id,'done');CLOUD_IMPORT_STATUS='done';}}catch(e){}
   if(refreshAfter)await cloudRefresh(true);
   return true;
  }catch(e){
@@ -741,7 +741,7 @@ async function cloudCreateLegacy(snapshot,sourceId){
   await cloudRpc('post_financial_transaction',{p_type:type,p_amount:amount,p_currency_code:sourceCurrency,p_account_id:accountId,p_idempotency_key:cloudImportKey(sourceId,'tx',r.id),p_category_id:cat,p_destination_account_id:dest,p_related_goal_id:goal,p_related_loan_id:loan,p_related_investment_id:asset,p_target_amount:ta,p_target_currency_code:tc,p_fx_rate_to_base:cloudFxRate(sourceCurrency),p_target_fx_rate_to_base:tf,p_quantity:q,p_occurred_on:r.d||TD,p_note:r.note||null,p_is_recurring:!!r.rec});
  }
 }
-async function cloudImportSnapshot(snapshot,sourceId){cloudBackup(CLOUD_USER.id,sourceId);CLOUD_IMPORT_STATUS='running';try{localStorage.setItem('wos_cloud_import_'+CLOUD_USER.id,'running')}catch(e){}try{await cloudCreateLegacy(snapshot,sourceId);CLOUD_IMPORT_STATUS='done';try{localStorage.setItem('wos_cloud_import_'+CLOUD_USER.id,'done')}catch(e){}await cloudRefresh();toast('✓ Local financial data imported into your cloud account.');}catch(e){CLOUD_IMPORT_STATUS='partial';try{localStorage.setItem('wos_cloud_import_'+CLOUD_USER.id,'partial')}catch(x){}throw e;}}
+async function cloudImportSnapshot(snapshot,sourceId){cloudBackup(CLOUD_USER.id,sourceId);CLOUD_IMPORT_STATUS='running';try{localStorage.setItem('wos_cloud_import_'+CLOUD_USER.id,'running')}catch(e){}try{await cloudCreateLegacy(snapshot,sourceId);if(cloudPendingCount()||CLOUD_OFFLINE||!navigator.onLine){CLOUD_IMPORT_STATUS='queued';try{localStorage.setItem('wos_cloud_import_'+CLOUD_USER.id,'queued')}catch(e){}toast('Local data is saved safely and queued for cloud sync when online.');return;}CLOUD_IMPORT_STATUS='done';try{localStorage.setItem('wos_cloud_import_'+CLOUD_USER.id,'done')}catch(e){}await cloudRefresh();toast('✓ Local financial data imported into your cloud account.');}catch(e){CLOUD_IMPORT_STATUS='partial';try{localStorage.setItem('wos_cloud_import_'+CLOUD_USER.id,'partial')}catch(x){}throw e;}}
 async function cloudImportLocal(){return cloudImportSnapshot(JSON.parse(JSON.stringify(S)),cloudImportSourceId());}
 async function cloudImportSavedBackup(){if(!CLOUD_USER)throw new Error('Sign in to your cloud account first.');const sourceId=cloudImportSourceId(),key=cloudBackupKey(CLOUD_USER.id,sourceId),raw=localStorage.getItem(key);if(!raw)throw new Error('No local safety backup was found on this device.');const snapshot=JSON.parse(raw);if(!confirm('Merge the saved local backup into this cloud account? Existing cloud entries remain. Imported records use device-specific idempotency keys to avoid duplicate retries.'))return;await cloudImportSnapshot(snapshot,sourceId);}
 async function cloudRefresh(skipSync=false){
