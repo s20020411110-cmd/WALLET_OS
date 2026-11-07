@@ -682,7 +682,33 @@ PG.more=()=>`<div class=sv>${[['income','↗','الدخل|Income'],['expenses','
 PG.activity=()=>{const m={all:Object.keys(TL),inc:['inc'],exp:['exp'],trf:['trf'],oth:['sav','pay','buy','sell']},ts=m[AF]||m.all;return `${heat()}<div class=chs>${[['all','الكل|All'],['inc','دخل|Income'],['exp','مصروف|Expense'],['trf','تحويل|Transfer'],['oth','أخرى|Other']].map(c=>`<button class="chp ${AF==c[0]?'sel':''}" data-a=af data-v=${c[0]}>${_(c[1])}</button>`).join('')}</div><div class=cd><div class=tl><input class=in placeholder="${_('بحث…|Search…')}" value="${Q}" oninput="Q=this.value;$('#tb').innerHTML=tbody(['${ts.join("','")}'])"><button class=bt data-a=csv data-v=${ts.join()}>CSV</button></div><div id=tb>${actList(ts)}</div></div>`};
 PG.exchange=()=>{
  const sel=k=>`<select onchange="EX.${k}=this.value;build()">${XO.map(o=>`<option value=${o} ${EX[k]==o?'selected':''}>${xl(o)}</option>`).join('')}</select>`;
- const g=S.gold,updated=g.t?new Date(g.t).toLocaleString(LOC()):'—';
+ const g=S.gold,precise=(v,c)=>{const n=Number(v).toLocaleString(LOC(),{minimumFractionDigits:2,maximumFractionDigits:2});return c==='USD'?'
+ const fxUpdated=S.fxMeta&&S.fxMeta.fetchedAt?new Date(S.fxMeta.fetchedAt).toLocaleString(LOC()):_('لم يتم التحديث بعد|Not updated yet');
+ const goldSource=({xaus:'XAUS','gold-api':'Gold API',snap:_('لقطة محفوظة|Saved snapshot'),manual:_('يدوي|Manual')})[g.src]||g.src||'—';
+ const names={USD:'الدولار الأمريكي|US dollar',SAR:'الريال السعودي|Saudi riyal',AED:'الدرهم الإماراتي|UAE dirham',BHD:'الدينار البحريني|Bahraini dinar',EUR:'اليورو|Euro',KWD:'الدينار الكويتي|Kuwaiti dinar',OMR:'الريال العماني|Omani rial',YER:'الريال اليمني|Yemeni rial'};
+ const order=['USD','SAR','AED','BHD','EUR','KWD','OMR','YER'];
+ const localRows=order.filter(c=>S.fxLocalRates&&S.fxLocalRates[c]).map(c=>{const r=S.fxLocalRates[c];return `<tr><td>${_(names[c])} (${c})</td><td class=am>${Number(r.buy).toLocaleString(LOC(),{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class=am>${Number(r.sell).toLocaleString(LOC(),{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`}).join('');
+ return `<div class="xc pay"><small>${_('أنت تدفع|You pay')}</small><div class=xr>${sel('f')}<input class=xi type=number inputmode=decimal min=0 value="${EX.a}" oninput="EX.a=+this.value||0;$('#xo').textContent=xf(EX.a*xr(),EX.t)"></div></div>
+ <button class=swp data-a=swp aria-label=swap>⇅</button>
+ <div class="xc get"><small>${_('أنت تحصل|You get')}</small><div class=xr>${sel('t')}<b id=xo>${xf(EX.a*xr(),EX.t)}</b></div></div>
+ <div class=cd>
+  <div class=row>${_('سعر الصرف|Rate')}<b dir=ltr>1 ${xl(EX.f)} = ${+xr().toPrecision(5)} ${xl(EX.t)}</b></div>
+  <div class=row>${_('الذهب (أونصة تروي)|Gold (troy ounce)')}<b>${precise(g.usd,'USD')}</b></div>
+  <div class=row>${_('الذهب عيار 24 / جرام (دولار)|24K gold / gram (USD)')}<b>${precise(gUSDg()*.999,'USD')}</b></div>
+  <div class=row>${_('الذهب عيار 24 / جرام (العملة الأساسية)|24K gold / gram (base currency)')}<b>${precise(cv(gUSDg()*.999,'USD',S.base),S.base)}</b></div>
+  <div class=row>${_('مصدر الذهب|Gold source')}<b>${goldSource} · ${LV.ok?_('محدّث|Fresh'):_('آخر سعر / تحقق من التوقيت|Last price / check timestamp')}</b></div>
+  <div class=row>${_('وقت تحديث الذهب|Gold updated at')}<b>${updated}</b></div>
+ </div>
+ <div class=cd>
+  <h4>${_('أسعار الصرف في عدن|Aden exchange rates')}</h4>
+  <p class=bc>${_('المصدر|Source')}: <a href="https://exrye.com/aden" target=_blank rel=noopener>exrye.com/aden</a> · ${_('تاريخ جلب البيانات|Fetched at')}: ${fxUpdated}</p>
+  <div class=sc><table><thead><tr><th>${_('العملة|Currency')}</th><th>${_('شراء|Buy')}</th><th>${_('بيع|Sell')}</th></tr></thead><tbody>${localRows||`<tr><td colspan=3>${_('سيظهر جدول عدن بعد أول تحديث ناجح|Aden rates appear after the first successful refresh')}</td></tr>`}</tbody></table></div>
+  <p class=bc>${_('يستخدم التطبيق متوسط سعري الشراء والبيع للتحويلات التقديرية، مع الاحتفاظ بالسعرين الأصليين للعرض. يُحدّث جدول الصرف مرة يومياً حسب تاريخ عدن، بينما يتحدّث الذهب دورياً.|The app uses the midpoint of buy/sell for indicative conversions while retaining both source prices for display. FX refreshes once per Aden calendar day; gold refreshes periodically.')}</p>
+  <button class=bt data-a=lv>${_('تحديث الأسعار الآن|Refresh prices now')}</button>
+ </div>
+ <p class=bc>${_('الأسعار للاطلاع فقط وليست عرضًا للتحويل الفعلي.|Rates are indicative, not a transfer offer.')}</p>`
+};
++n:n+' '+SYM[c]},updated=g.t?new Date(g.t).toLocaleString(LOC()):'—';
  const fxUpdated=S.fxMeta&&S.fxMeta.fetchedAt?new Date(S.fxMeta.fetchedAt).toLocaleString(LOC()):_('لم يتم التحديث بعد|Not updated yet');
  const goldSource=({xaus:'XAUS','gold-api':'Gold API',snap:_('لقطة محفوظة|Saved snapshot'),manual:_('يدوي|Manual')})[g.src]||g.src||'—';
  const names={USD:'الدولار الأمريكي|US dollar',SAR:'الريال السعودي|Saudi riyal',AED:'الدرهم الإماراتي|UAE dirham',BHD:'الدينار البحريني|Bahraini dinar',EUR:'اليورو|Euro',KWD:'الدينار الكويتي|Kuwaiti dinar',OMR:'الريال العماني|Omani rial',YER:'الريال اليمني|Yemeni rial'};
