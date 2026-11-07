@@ -79,11 +79,12 @@ test('cloud import is multi-device safe and password recovery is wired', () => {
 
 test('cloud creation forms use database RPCs instead of local-only writes', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  for (const name of ['create_wallet_account', 'create_savings_goal_v2', 'create_loan_v2', 'create_investment_asset_v2']) {
+  for (const name of ['create_wallet_account', 'create_savings_goal_v2', 'create_loan_v2', 'create_investment_asset_v3']) {
     assert.match(html, new RegExp("cloudRpc\\('" + name + "'"));
   }
   assert.match(html, /CLOUD_USER\)\{await cloudUpsertBudget\(item\);await cloudRefresh\(\);return true;\}/);
-  assert.match(html, /p_subtype:cloudGoldSubtype\(/);\n  assert.match(html, /function cloudGoldSubtype\(/);
+  assert.match(html, /p_subtype:cloudGoldSubtype\(/);
+  assert.match(html, /function cloudGoldSubtype\(/);
 });
 
 test('income and expense form types are translated to the ledger RPC contract', () => {
