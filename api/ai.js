@@ -15,9 +15,23 @@ function json(res, status, body) {
   return res.status(status).setHeader('Cache-Control', 'no-store').json(body);
 }
 
+const NATIVE_APP_ORIGIN = 'https://localhost';
+
+function applyNativeCors(req, res) {
+  const origin = String(req.headers && req.headers.origin || '').trim();
+  if (origin !== NATIVE_APP_ORIGIN) return false;
+  res.setHeader('Access-Control-Allow-Origin', NATIVE_APP_ORIGIN);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.setHeader('Access-Control-Max-Age', '600');
+  res.setHeader('Vary', 'Origin');
+  return true;
+}
+
 function sameOrigin(req) {
   const origin = req.headers && req.headers.origin;
   if (!origin) return true;
+  if (origin === NATIVE_APP_ORIGIN) return true;
   const host = String((req.headers && (req.headers['x-forwarded-host'] || req.headers.host)) || '')
     .split(',')[0].trim().toLowerCase();
   try {
@@ -156,6 +170,12 @@ async function gatewayHealth(req, res) {
 }
 
 module.exports = async function handler(req, res) {
+  const nativeOrigin = applyNativeCors(req, res);
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Allow', 'GET, POST, OPTIONS');
+    if (!nativeOrigin) return json(res, 403, { error: 'Cross-origin requests are not allowed.' });
+    return res.status(204).end();
+  }
   if (req.method === 'GET') {
     const url = new URL(req.url || '/', 'https://' + (getHeader(req, 'host') || 'localhost'));
     if (url.searchParams.get('health') === '1') return gatewayHealth(req, res);
