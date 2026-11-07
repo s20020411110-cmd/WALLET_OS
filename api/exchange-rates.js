@@ -10,8 +10,8 @@ function json(res, status, body) {
 
 function textFromHtml(value) {
   return String(value || '')
-    .replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi, ' ')
-    .replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi, ' ')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;|&#160;/gi, ' ')
     .replace(/&amp;/gi, '&')
@@ -19,13 +19,13 @@ function textFromHtml(value) {
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, ' ')
-    .replace(/\\s+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
 function numericCell(cell) {
   const text = textFromHtml(cell).replace(/[٬،]/g, ',').replace(/,/g, '');
-  const match = text.match(/-?\\d+(?:\\.\\d+)?/);
+  const match = text.match(/-?\d+(?:\.\d+)?/);
   if (!match) return null;
   const value = Number(match[0]);
   return Number.isFinite(value) && value > 0 ? value : null;
@@ -33,15 +33,15 @@ function numericCell(cell) {
 
 function parseRatesFromHtml(html) {
   const rates = {};
-  const rows = String(html).match(/<tr\\b[^>]*>[\\s\\S]*?<\\/tr>/gi) || [];
+  const rows = String(html).match(/<tr\b[^>]*>[\s\S]*?<\/tr>/gi) || [];
 
   for (const row of rows) {
     const rowText = textFromHtml(row);
-    const codeMatch = rowText.match(/\\b(AED|BHD|EUR|KWD|OMR|SAR|USD|YER)\\b/i);
+    const codeMatch = rowText.match(/\b(AED|BHD|EUR|KWD|OMR|SAR|USD|YER)\b/i);
     if (!codeMatch) continue;
 
     const code = codeMatch[1].toUpperCase();
-    const cells = [...row.matchAll(/<t[dh]\\b[^>]*>([\\s\\S]*?)<\\/t[dh]>/gi)]
+    const cells = [...row.matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)]
       .map(match => match[1]);
     const values = cells.map(numericCell).filter(value => value !== null);
 
@@ -93,7 +93,7 @@ module.exports = async function exchangeRatesHandler(req, res) {
     }
 
     const plainText = textFromHtml(html);
-    const updatedMatch = plainText.match(/أخر\\s*تحديث\\s*[:：]\\s*([^|]{1,24})/i);
+    const updatedMatch = plainText.match(/أخر\s*تحديث\s*[:：]\s*([^|]{1,24})/i);
     return json(res, 200, {
       source: SOURCE_URL,
       sourceUpdatedLabel: updatedMatch ? updatedMatch[1].trim() : 'غير محدد',
