@@ -197,7 +197,7 @@ test('AI Gateway rejects requests when no no-training provider is available', as
         'x-vercel-oidc-token': 'test-vercel-oidc-token'
       }
     }), res);
-    assert.equal(res.statusCode, 503);
+    assert.equal(res.statusCode, 400);
     assert.equal(res.body.code, 'NO_TRAINING_UNAVAILABLE');
     assert.match(res.body.error, /No providers available/);
   } finally {
