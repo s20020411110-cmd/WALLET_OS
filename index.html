@@ -384,7 +384,7 @@ const $=s=>document.querySelector(s);
 let S;try{S=JSON.parse(localStorage.getItem('wos'))}catch(e){}
 const NOW=new Date(),TY=NOW.getFullYear(),CM=NOW.getMonth(),TD=NOW.toISOString().slice(0,10);
 S=S||{name:'',base:'SAR',lang:'ar',theme:'system',rates:{USD:1,SAR:3.75,AED:3.6725,YER:250},accs:[{id:1,n:'نقدي',t:'cash',cur:'SAR'},{id:2,n:'البنك',t:'bank',cur:'SAR'}],tx:[],loans:[],goals:[],inv:[],bud:[],year:TY,col:0};
-if(!S.v3){S.th='emerald';S.v3=1}S.th=S.th||'lilac';S.ct=S.ct||'c';S.man=S.man||{YER:1};S.gold=S.gold||{usd:3941.29,t:'2026-11-02T14:00:00Z',src:'snap',h:[]};
+if(!S.v3){S.th='emerald';S.v3=1}S.th=S.th||'lilac';S.ct=S.ct||'c';S.man=S.man||{};if(S.man.YER===1&&S.rates&&S.rates.YER===250&&Object.keys(S.man).length===1)S.man={};S.gold=S.gold||{usd:3941.29,t:'2026-11-02T14:00:00Z',src:'snap',h:[]};
 const save=()=>{try{localStorage.setItem('wos',JSON.stringify(S))}catch(e){}};
 const _=s=>s.split('|')[S.lang=='ar'?0:1],RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
 const LOC=()=>S.lang=='ar'?'ar-u-nu-latn':'en-US',SYM={USD:'$',SAR:'ر.س',AED:'د.إ',YER:'﷼'},nf=v=>new Intl.NumberFormat(LOC(),{maximumFractionDigits:0}).format(v),fm=(v,c=S.base)=>c=='USD'?(v<0?'-':'')+'$'+nf(Math.abs(v)):nf(v)+' '+SYM[c];
@@ -629,13 +629,50 @@ else{const up=AV=='signup';AM=up?'up':'in';h=`<div class=ah>${bkb('start')}${lgb
 $('#app').innerHTML=`<div class="ph au2">${h}</div>`;document.querySelectorAll('.au2>*').forEach((e,i)=>e.style.setProperty('--i',i))}
 function landing(){return `<div class="landing-page"><div class="landing-top"><div class="brand-lockup">${LG(44)}<div><b>WALLET OS</b><small>${_('إدارة أموالك بثقة|Manage money with clarity')}</small></div></div><button class="bt gl" data-a=lang>${S.lang=='ar'?'EN':'ع'}</button></div><div class="landing-grid"><div class="landing-copy"><span class="eyebrow">${_('مساحة مالية شخصية|PERSONAL FINANCE SPACE')}</span><h1>${_('أموالك كلها، في مكان واحد.|Your money, all in one place.')}</h1><p>${_('نظّم الحسابات والدخل والمصروفات والادخار والاستثمار من لوحة واحدة، بوضوح يساعدك على اتخاذ قرارات أفضل.|Bring accounts, income, expenses, savings and investments together in one dashboard designed to make every decision clearer.')}</p><div class="landing-actions"><button class=gb data-a=tologin>${_('ابدأ الآن|Get started')}</button><button class="gb gl" data-a=tologin data-v=guest>${_('استكشف كضيف|Explore as guest')}</button></div><div class="landing-points"><span>✓ ${_('خصوصية محلية|Local privacy')}</span><span>✓ ${_('أربع عملات|Four currencies')}</span><span>✓ ${_('تقارير واضحة|Clear reports')}</span></div></div><div class="landing-art"><div class="landing-card"><small>${_('صافي الثروة|NET WORTH')}</small><b>••••••</b><div class="landing-mini-chart"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span>${_('صورة مالية أكثر وضوحًا|A clearer financial picture')}</span></div><div class="landing-float">${LG(32)} <b>WALLET OS</b></div></div></div></div>`}
 function login(){const up=AM=='up',f=(id,t,l)=>`<label>${l}<input class=in id=${id} type=${t} autocomplete=${t=='password'?(up?'new-password':'current-password'):id=='em'?'email':'name'}></label>`;return `<div class=au><canvas id=hc></canvas><div class=ct><form class=glass onsubmit="event.preventDefault();A.login()"><div class=lg style="padding:0;justify-content:center">${LG(40)}<span>WALLET OS</span></div><div class=cht style="justify-content:center"><button type=button class="bt ${up?'':'gon'}" data-a=am data-v=in>${_('دخول|Sign in')}</button><button type=button class="bt ${up?'gon':''}" data-a=am data-v=up>${_('حساب جديد|Create account')}</button></div>${up?f('un','text',_('الاسم|Name')):''}${f('em','email',_('البريد الإلكتروني|Email'))}${f('pw','password',_('كلمة المرور|Password'))}<button class=gb>${up?_('إنشاء الحساب|Create account'):_('دخول|Sign in')}</button><button type=button class="gb gl" data-a=tologin data-v=guest>${_('متابعة كضيف|Continue as guest')}</button><small>${_('الحساب محلي على هذا الجهاز ولا يُرسل لأي خادم قبل ربط Supabase.|Stored on this device only until Supabase is connected.')}</small><button type=button class="bt gl" data-a=tolanding>${S.lang=='ar'?'→':'←'}</button></form></div></div>`}
-const OZ=31.1034768,PUR={24:.999,22:.9167,21:.875,18:.75},gUSDg=()=>S.gold.usd/OZ,gp=a=>cv(gUSDg()*(PUR[a.karat||24]||.999),'USD',a.cur);
+const OZ=31.1034768,PUR={24:.999,22:.9167,21:.875,18:.75},gUSDg=()=>Number(S.gold.gramUsd)>0?Number(S.gold.gramUsd):S.gold.usd/OZ,gp=a=>cv(gUSDg()*(PUR[a.karat||24]||.999),'USD',a.cur);
 const GT=['سبائك ذهب|Gold bars','عملات ذهبية|Gold coins','مشغولات ذهبية|Jewelry','جنيه / ليرة ذهب|Sovereigns','ذهب كسر|Scrap gold','أخرى|Other'];
-let LV={ok:0,fail:0,fx:0,dir:0},NA=0,PREV={},FIRST=1,LASTID=0;
-async function jf(u){const c=new AbortController(),t=setTimeout(()=>c.abort(),6000);try{const r=await fetch(u,{signal:c.signal,cache:'no-store'});if(!r.ok)throw 0;return await r.json()}finally{clearTimeout(t)}}
-async function live(man){let ch=0;try{const g=await jf('https://api.gold-api.com/price/XAU');if(g&&g.price>0){const o=S.gold.usd;S.gold={usd:+g.price,t:new Date().toISOString(),src:'live',h:[...(S.gold.h||[]).slice(-59),+g.price]};LV.ok=1;LV.fail=0;LV.dir=S.gold.usd>=o?1:-1;ch=1}}catch(e){LV.fail++;LV.ok=0}
-if(!LV.fx||man||Date.now()-LV.fx>6e5)try{const f=await jf('https://open.er-api.com/v6/latest/USD');if(f&&f.rates){['SAR','AED','YER'].forEach(c=>{if(!S.man[c]&&f.rates[c])S.rates[c]=f.rates[c]});S.rt=new Date().toISOString();LV.fx=Date.now();ch=1}}catch(e){}
-if(ch){save();if(!document.querySelector('.ov')&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){NA=1;build();NA=0}}else if(man)toast(_('تعذّر الاتصال بمزوّد الأسعار — يُستخدم آخر سعر محفوظ|Price provider unreachable — using the last saved price'))}
+let LV={ok:0,fail:0,fx:0,fxTry:0,fxOK:0,dir:0},NA=0,PREV={},FIRST=1,LASTID=0;
+async function jf(u){const c=new AbortController(),t=setTimeout(()=>c.abort(),8000);try{const r=await fetch(u,{signal:c.signal,cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(t)}}
+const adenDay=()=>{const p=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Aden',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),v={};p.forEach(x=>{v[x.type]=x.value});return v.year+'-'+v.month+'-'+v.day};
+async function live(man){
+ let ch=0,gold=null;
+ try{
+  const x=await jf('https://xaus.com/api/v1/spot?currency=USD&unit=gram&compact=1');
+  const oz=Number(x&&x.spot_usd_oz),gram=Number(x&&(x.per_gram_usd||(x.xau&&x.xau.price)));
+  const state=x&&x.data_state&&x.data_state.status||'fresh',stamp=x&&(x.updated_at||(x.data_state&&x.data_state.as_of));
+  if(oz>0&&gram>0&&state!=='unavailable')gold={oz,gram,state,stamp:stamp||new Date().toISOString(),source:'xaus'};
+ }catch(e){}
+ if(!gold)try{
+  const x=await jf('https://api.gold-api.com/price/XAU'),oz=Number(x&&x.price);
+  if(oz>0){const stamp=x.updatedAt||x.updated_at||new Date().toISOString(),age=Date.now()-Date.parse(stamp);gold={oz,gram:oz/OZ,state:!Number.isFinite(age)||age<=120000?'fresh':'stale',stamp,source:'gold-api'}}
+ }catch(e){}
+ if(gold){
+  const old=S.gold.usd;
+  S.gold={...S.gold,usd:gold.oz,gramUsd:gold.gram,t:gold.stamp,src:gold.source,state:gold.state,h:[...(S.gold.h||[]).slice(-59),gold.oz]};
+  LV.ok=gold.state==='fresh'?1:0;LV.fail=0;LV.dir=gold.oz>=old?1:-1;ch=1;
+ }else{LV.fail++;LV.ok=0}
+ const today=adenDay(),fxDue=!!man||!S.fxMeta||S.fxMeta.day!==today;
+ if(fxDue&&(man||Date.now()-LV.fxTry>900000)){
+  LV.fxTry=Date.now();
+  try{
+   const f=await jf('/api/exchange-rates'),raw=f&&f.rates;
+   if(!raw)throw new Error('Missing rate table');
+   const mid={};
+   Object.keys(raw).forEach(c=>{const buy=Number(raw[c]&&raw[c].buy),sell=Number(raw[c]&&raw[c].sell);if(buy>0&&sell>0)mid[c]=(buy+sell)/2});
+   const usd=mid.USD;
+   if(!(usd>0&&mid.SAR>0&&mid.AED>0&&mid.YER>0))throw new Error('Missing required Aden rates');
+   const next={...S.rates};
+   ['USD','SAR','AED','YER'].forEach(c=>{if(!S.man[c])next[c]=usd/mid[c]});
+   next.USD=1;S.rates=next;S.fxLocalRates=raw;
+   S.fxMeta={source:'exrye.com/aden',fetchedAt:f.fetchedAt||new Date().toISOString(),sourceUpdatedLabel:f.sourceUpdatedLabel||'غير محدد',day:today,conversion:'midpoint of buy/sell'};
+   LV.fx=Date.now();LV.fxOK=1;ch=1;
+  }catch(e){LV.fxOK=0}
+ }
+ if(ch){
+  save();
+  if(!document.querySelector('.ov')&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){NA=1;build();NA=0}
+ }else if(man)toast(_('تعذّر تحديث الأسعار — يُستخدم آخر سعر محفوظ|Could not refresh prices — using the last saved rates'));
+}
 const tk=()=>{const g=S.gold,h=g.h||[];return `<div class=tkr><div class=tk><small>XAU/USD · ${_('الأونصة|oz')}</small><b class="${LV.dir>0?'fu':LV.dir<0?'fd':''}">${fm(g.usd,'USD')}</b>${spark(h,'var(--g)')}<em class="${LV.ok?'lv':''}">${LV.ok?_('مباشر|LIVE'):_('لقطة|SNAPSHOT')}</em></div>${['SAR','AED','YER'].map(c=>`<div class=tk><small>USD/${SYM[c]}</small><b>${S.rates[c].toFixed(c=='YER'?0:4)}</b><em>${S.man[c]?_('يدوي|MANUAL'):_('تلقائي|AUTO')}</em></div>`).join('')}<div class=tk><small>${_('ذهب 24 / جرام|Gold 24K / g')}</small><b>${fm(cv(gUSDg()*.999,'USD',S.base))}</b></div></div>`};
 const chips=()=>`<div class=chs>${S.accs.map(a=>`<div class=chp><span class=cb>${SYM[a.cur]}</span><b>${a.n}</b><span>${fm(bal(a),a.cur)}</span></div>`).join('')}<button class="chp pl" data-a=add data-v=acc>＋</button></div>`;
 const comp=()=>{const it=[[_('الحسابات|Accounts'),Math.max(0,accT()),'var(--g)'],[_('الادخار|Savings'),savT(),'var(--gd)'],[_('الذهب|Gold'),invV(),'var(--g2)'],[_('مستحق لك|Owed to you'),Z(OW().map(rem)),'#b9bcc3']].filter(z=>z[1]>0),t=Z(it.map(z=>z[1]));return t?`<div class=cp>${it.map(z=>`<div class=sg style="flex:${z[1]};background:${z[2]}"><small>${z[0]}</small><b>${fm(z[1])}</b><em>${(z[1]/t*100).toFixed(1)}%</em></div>`).join('')}<a class=bk href="#/accounts">${_('التفاصيل|Details')}</a></div>`:''};
@@ -643,7 +680,34 @@ let MO=-1,AF='all',EX={f:'USD',t:'SAR',a:100};
 const XO=['SAR','USD','AED','YER','GOLD'],XU=c=>c=='GOLD'?gUSDg()*.999:1/S.rates[c],xr=()=>XU(EX.f)/XU(EX.t),xl=c=>c=='GOLD'?_('ذهب 24 (جم)|Gold 24K (g)'):SYM[c]+' '+c,xf=(v,c)=>c=='GOLD'?v.toFixed(3)+' g':(c=='USD'?'$':'')+new Intl.NumberFormat(LOC(),{maximumFractionDigits:2}).format(v)+(c=='USD'?'':' '+SYM[c]);
 PG.more=()=>`<div class=sv>${[['income','↗','الدخل|Income'],['expenses','↘','المصروفات|Expenses'],['loans','◐','القروض|Loans'],['invest','◈','الذهب|Gold'],['accounts','▣','الحسابات|Accounts'],['budgets','≡','الميزانيات|Budgets'],['exchange','⇄','الصرف|Exchange','k'],['reports','▤','التقارير|Reports'],['ai','✦','المساعد|Assistant'],['settings','⚙','الإعدادات|Settings']].map(t=>`<a class="tile ${t[3]||''}" href="#/${t[0]}"><span class=ti>${t[1]}</span><b>${_(t[2])}</b></a>`).join('')}</div>`;
 PG.activity=()=>{const m={all:Object.keys(TL),inc:['inc'],exp:['exp'],trf:['trf'],oth:['sav','pay','buy','sell']},ts=m[AF]||m.all;return `${heat()}<div class=chs>${[['all','الكل|All'],['inc','دخل|Income'],['exp','مصروف|Expense'],['trf','تحويل|Transfer'],['oth','أخرى|Other']].map(c=>`<button class="chp ${AF==c[0]?'sel':''}" data-a=af data-v=${c[0]}>${_(c[1])}</button>`).join('')}</div><div class=cd><div class=tl><input class=in placeholder="${_('بحث…|Search…')}" value="${Q}" oninput="Q=this.value;$('#tb').innerHTML=tbody(['${ts.join("','")}'])"><button class=bt data-a=csv data-v=${ts.join()}>CSV</button></div><div id=tb>${actList(ts)}</div></div>`};
-PG.exchange=()=>{const sel=k=>`<select onchange="EX.${k}=this.value;build()">${XO.map(o=>`<option value=${o} ${EX[k]==o?'selected':''}>${xl(o)}</option>`).join('')}</select>`,g=S.gold;return `<div class="xc pay"><small>${_('أنت تدفع|You pay')}</small><div class=xr>${sel('f')}<input class=xi type=number inputmode=decimal min=0 value="${EX.a}" oninput="EX.a=+this.value||0;$('#xo').textContent=xf(EX.a*xr(),EX.t)"></div></div><button class=swp data-a=swp aria-label=swap>⇅</button><div class="xc get"><small>${_('أنت تحصل|You get')}</small><div class=xr>${sel('t')}<b id=xo>${xf(EX.a*xr(),EX.t)}</b></div></div><div class=cd><div class=row>${_('سعر الصرف|Rate')}<b dir=ltr>1 ${xl(EX.f)} = ${+xr().toPrecision(5)} ${xl(EX.t)}</b></div><div class=row>${_('الذهب (أونصة)|Gold (oz)')}<b>${fm(g.usd,'USD')}</b></div><div class=row>${_('المصدر|Source')}<b>${({live:_('مباشر|Live'),snap:_('لقطة محفوظة|Saved snapshot'),manual:_('يدوي|Manual')})[g.src]}</b></div></div><p class=bc>${_('الأسعار للاطلاع فقط وليست عرضًا للتحويل الفعلي.|Rates are indicative, not a transfer offer.')}</p>`};
+PG.exchange=()=>{
+ const sel=k=>`<select onchange="EX.${k}=this.value;build()">${XO.map(o=>`<option value=${o} ${EX[k]==o?'selected':''}>${xl(o)}</option>`).join('')}</select>`;
+ const g=S.gold,updated=g.t?new Date(g.t).toLocaleString(LOC()):'—';
+ const fxUpdated=S.fxMeta&&S.fxMeta.fetchedAt?new Date(S.fxMeta.fetchedAt).toLocaleString(LOC()):_('لم يتم التحديث بعد|Not updated yet');
+ const goldSource=({xaus:'XAUS','gold-api':'Gold API',snap:_('لقطة محفوظة|Saved snapshot'),manual:_('يدوي|Manual')})[g.src]||g.src||'—';
+ const names={USD:'الدولار الأمريكي|US dollar',SAR:'الريال السعودي|Saudi riyal',AED:'الدرهم الإماراتي|UAE dirham',BHD:'الدينار البحريني|Bahraini dinar',EUR:'اليورو|Euro',KWD:'الدينار الكويتي|Kuwaiti dinar',OMR:'الريال العماني|Omani rial',YER:'الريال اليمني|Yemeni rial'};
+ const order=['USD','SAR','AED','BHD','EUR','KWD','OMR','YER'];
+ const localRows=order.filter(c=>S.fxLocalRates&&S.fxLocalRates[c]).map(c=>{const r=S.fxLocalRates[c];return `<tr><td>${_(names[c])} (${c})</td><td class=am>${Number(r.buy).toLocaleString(LOC(),{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class=am>${Number(r.sell).toLocaleString(LOC(),{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`}).join('');
+ return `<div class="xc pay"><small>${_('أنت تدفع|You pay')}</small><div class=xr>${sel('f')}<input class=xi type=number inputmode=decimal min=0 value="${EX.a}" oninput="EX.a=+this.value||0;$('#xo').textContent=xf(EX.a*xr(),EX.t)"></div></div>
+ <button class=swp data-a=swp aria-label=swap>⇅</button>
+ <div class="xc get"><small>${_('أنت تحصل|You get')}</small><div class=xr>${sel('t')}<b id=xo>${xf(EX.a*xr(),EX.t)}</b></div></div>
+ <div class=cd>
+  <div class=row>${_('سعر الصرف|Rate')}<b dir=ltr>1 ${xl(EX.f)} = ${+xr().toPrecision(5)} ${xl(EX.t)}</b></div>
+  <div class=row>${_('الذهب (أونصة تروي)|Gold (troy ounce)')}<b>${fm(g.usd,'USD')}</b></div>
+  <div class=row>${_('الذهب عيار 24 / جرام (دولار)|24K gold / gram (USD)')}<b>${fm(gUSDg()*.999,'USD')}</b></div>
+  <div class=row>${_('الذهب عيار 24 / جرام (العملة الأساسية)|24K gold / gram (base currency)')}<b>${fm(cv(gUSDg()*.999,'USD',S.base))}</b></div>
+  <div class=row>${_('مصدر الذهب|Gold source')}<b>${goldSource} · ${LV.ok?_('محدّث|Fresh'):_('آخر سعر / تحقق من التوقيت|Last price / check timestamp')}</b></div>
+  <div class=row>${_('وقت تحديث الذهب|Gold updated at')}<b>${updated}</b></div>
+ </div>
+ <div class=cd>
+  <h4>${_('أسعار الصرف في عدن|Aden exchange rates')}</h4>
+  <p class=bc>${_('المصدر|Source')}: <a href="https://exrye.com/aden" target=_blank rel=noopener>exrye.com/aden</a> · ${_('تاريخ جلب البيانات|Fetched at')}: ${fxUpdated}</p>
+  <div class=sc><table><thead><tr><th>${_('العملة|Currency')}</th><th>${_('شراء|Buy')}</th><th>${_('بيع|Sell')}</th></tr></thead><tbody>${localRows||`<tr><td colspan=3>${_('سيظهر جدول عدن بعد أول تحديث ناجح|Aden rates appear after the first successful refresh')}</td></tr>`}</tbody></table></div>
+  <p class=bc>${_('يستخدم التطبيق متوسط سعري الشراء والبيع للتحويلات التقديرية، مع الاحتفاظ بالسعرين الأصليين للعرض. يُحدّث جدول الصرف مرة يومياً حسب تاريخ عدن، بينما يتحدّث الذهب دورياً.|The app uses the midpoint of buy/sell for indicative conversions while retaining both source prices for display. FX refreshes once per Aden calendar day; gold refreshes periodically.')}</p>
+  <button class=bt data-a=lv>${_('تحديث الأسعار الآن|Refresh prices now')}</button>
+ </div>
+ <p class=bc>${_('الأسعار للاطلاع فقط وليست عرضًا للتحويل الفعلي.|Rates are indicative, not a transfer offer.')}</p>`
+};
 PG.home=()=>{const I=mon('inc'),E=mon('exp'),N=I.map((v,i)=>v-E[i]),c=cm(),p=Math.max(0,c-1),sel=MO<0||MO>11?c:MO,empty=!(S.tx.length||S.loans.length||S.goals.length||S.inv.length),al=alerts(),mx=Math.max(1,...I,...E),yrs=[TY-3,TY-2,TY-1,TY,TY+1],as=[[_('الحسابات|Accounts'),accT(),'accounts','▣'],[_('الادخار|Savings'),savT(),'savings','◎'],[_('الذهب|Gold'),invV(),'invest','◈'],[_('القروض|Debts'),-Z(LN().map(rem)),'loans','◐']].filter(z=>z[1]!=0),tot=Z(as.filter(z=>z[1]>0).map(z=>z[1])),g=S.goals.find(z=>!z.stop&&sv(z)<cv(z.target,z.cur))||S.goals[0],pc=g?Math.min(100,sv(g)/(cv(g.target,g.cur)||1)*100):0;
 return `${empty?`<div class=cd style="text-align:center"><h3>${_('ابدأ بتسجيل أول عملية|Record your first transaction')}</h3><p class=bc style="margin:6px 0 12px">${_('كل الأرقام تُحسب من عملياتك فقط.|Every figure comes from your own records.')}</p><button class="bt pr" data-a=quick>${_('إضافة عملية|Add transaction')}</button> <button class=bt data-a=demo>${_('بيانات تجريبية|Load sample data')}</button></div>`:''}
 <div class=hi><h1>${_('مرحبًا|Hello')}, <b>${S.name||_('بك|there')}</b>!</h1><p>${_('تابع أموالك اليوم.|Look at your money today.')}</p></div>
