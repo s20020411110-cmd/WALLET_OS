@@ -64,10 +64,7 @@ The assistant receives a compact snapshot: totals by period, net worth, account 
 
 The independent WALLET OS database is hosted in the existing Supabase project **wallet-os** (Singapore, Postgres 17). Its project reference is `lwefgfogrxavxczrznjl`.
 
-The hosted database has two applied migrations:
-
-- `20261107152547_wallet_os_finance_core_v1`
-- `20261107152753_wallet_os_concurrency_and_fk_indexes_v1`
+The hosted database has six applied migrations, including the app-sync and idempotency hardening migrations. See [the Supabase database guide](supabase/README.md) for the full hosted migration history and RPC contract.
 
 The schema includes user profiles, currencies, a chart of accounts, wallets, categories, budgets, savings goals, loans, investment assets and trades, transactions, double-entry journal entries and lines, FX quotes, gold price quotes, and audit logs. Read models are provided by `wallet_account_balances` and `monthly_financial_summary`.
 
@@ -87,7 +84,7 @@ A rollback-only integration test ran against temporary synthetic Auth identities
 
 The successful test run produced 11 transactions, 11 journal entries, and 24 journal lines; total base debits equalled total base credits. The test transaction was rolled back, leaving no synthetic users or financial data behind.
 
-Supabase Security Advisor reported no findings after the schema changes. Performance Advisor reported only informational unused-index notices, expected on a new database with no real workload; no unindexed foreign keys remained in the advisor output.
+Supabase Security Advisor reported no findings after the schema changes. Performance Advisor reported only informational unused-index notices, expected on a new database with no real workload; no unindexed foreign keys remained in the advisor output. The final sync-hardening migration adds the budget upsert conflict key and owner-scoped request-key uniqueness for savings goals, loans and investment assets.
 
 ### Browser application integration
 
