@@ -389,7 +389,7 @@ if(!S.v3){S.th='emerald';S.v3=1}S.th=S.th||'lilac';S.ct=S.ct||'c';S.man=S.man||{
 const save=()=>{try{localStorage.setItem('wos',JSON.stringify(S))}catch(e){}if(CLOUD_USER&&!CLOUD_LOADING)cloudPersistProfile();};
 const SUPABASE_URL='https://lwefgfogrxavxczrznjl.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_wlBi2KLoDCh0o8K_HbAArQ_O9uy-NLj';
-const SB=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
+let SB=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
 let CLOUD_USER=null,CLOUD_READY=false,CLOUD_LOADING=false,CLOUD_PROFILE_FP='',CLOUD_PROFILE_PENDING=false,CLOUD_IMPORT_STATUS='';
 if(S.user){S.auth=0;}else if(S.auth){S.localGuest=true;}
 const _=s=>s.split('|')[S.lang=='ar'?0:1],RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
@@ -605,17 +605,99 @@ const CLOUD_INCOME_NAMES=['Salary','Freelance','Projects','Business','Rent','Inv
 const CLOUD_EXPENSE_NAMES=['Food','Housing','Bills','Transport','Health','Education','Shopping','Entertainment','Travel','Family','Projects expenses','Subscriptions','Other expenses'];
 let CLOUD_CATEGORY_ROWS=[],CLOUD_CATEGORY_IDS={income:[],expense:[]};
 function cloudKey(prefix){return prefix+'-'+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));}
+
+let CLOUD_OFFLINE=!navigator.onLine,CLOUD_SYNCING=false,CLOUD_LAST_QUEUED=false,CLOUD_SYNC_ERROR='',CLOUD_AUTH_BOUND=false;
+const CLOUD_QUEUE_PREFIX='wos_sync_queue_v1_',CLOUD_MAP_PREFIX='wos_sync_idmap_v1_',CLOUD_CATEGORY_PREFIX='wos_categories_v1_';
+const cloudUid=()=>crypto.randomUUID?crypto.randomUUID():'wos-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+function cloudQueueKey(){if(!CLOUD_USER||!CLOUD_USER.id)throw new Error('A signed-in cloud account is required.');return CLOUD_QUEUE_PREFIX+CLOUD_USER.id;}
+function cloudMapKey(){if(!CLOUD_USER||!CLOUD_USER.id)throw new Error('A signed-in cloud account is required.');return CLOUD_MAP_PREFIX+CLOUD_USER.id;}
+function cloudQueueLoad(){try{const q=JSON.parse(localStorage.getItem(cloudQueueKey())||'[]');return Array.isArray(q)?q:[]}catch(e){return[];}}
+function cloudQueueSave(q){localStorage.setItem(cloudQueueKey(),JSON.stringify(q));cloudUpdateSyncButton();}
+function cloudMapLoad(){try{return JSON.parse(localStorage.getItem(cloudMapKey())||'{}')||{}}catch(e){return{};}}
+function cloudMapSave(m){localStorage.setItem(cloudMapKey(),JSON.stringify(m));}
+function cloudPendingCount(){try{return cloudQueueLoad().length}catch(e){return 0;}}
+function cloudUpdateSyncButton(){const b=document.querySelector('[data-a=sync]');if(!b)return;const n=cloudPendingCount();b.textContent=CLOUD_SYNCING?'↻':CLOUD_OFFLINE?'◌':n?'⇅ '+n:'✓';b.title=CLOUD_OFFLINE?'Offline · changes saved on this device':n+' change(s) waiting to sync':'Cloud sync is up to date';b.setAttribute('aria-label',b.title);}
+function cloudLooksLikeNetworkError(e){return !navigator.onLine||e instanceof TypeError||/failed to fetch|network|offline|load failed|connection|timed? ?out|socket|aborted/i.test(String(e&&e.message||e||''));}
+function cloudPushQueue(item,coalesce){const q=cloudQueueLoad();if(coalesce){for(let i=q.length-1;i>=0;i--)if(q[i].kind===coalesce)q.splice(i,1);}q.push(item);cloudQueueSave(q);return item;}
+function cloudCategoryCacheSave(){if(!CLOUD_USER)return;try{localStorage.setItem(CLOUD_CATEGORY_PREFIX+CLOUD_USER.id,JSON.stringify({rows:CLOUD_CATEGORY_ROWS,ids:CLOUD_CATEGORY_IDS}));}catch(e){}}
+function cloudCategoryCacheLoad(userId){try{const x=JSON.parse(localStorage.getItem(CLOUD_CATEGORY_PREFIX+userId)||'null');if(x&&Array.isArray(x.rows)&&x.ids){CLOUD_CATEGORY_ROWS=x.rows;CLOUD_CATEGORY_IDS=x.ids;return true;}}catch(e){}return false;}
+function cloudOptimisticRpc(name,a,localId){
+ if(name==='create_wallet_account'){S.accs=S.accs||[];S.accs.push({id:localId,n:a.p_name,t:({cash:'cash',bank:'bank',mobile:'wallet',savings:'savings',other:'other',card:'card'})[a.p_kind]||'other',cur:a.p_currency_code});}
+ else if(name==='create_savings_goal_v2'){S.goals=S.goals||[];S.goals.push({id:localId,n:a.p_name,target:Number(a.p_target_amount),cur:a.p_currency_code,stop:false,date:a.p_target_date||''});}
+ else if(name==='create_loan_v2'){S.loans=S.loans||[];S.loans.push({id:localId,kind:a.p_kind==='borrowed'?'loan':'owed',n:a.p_name,orig:Number(a.p_principal),cur:a.p_currency_code,rate:String(a.p_interest_rate||0),type:'Personal',start:a.p_start_date||'',due:a.p_due_date||'',inst:Number(a.p_installment_amount)||0,cnt:Number(a.p_installment_count)||0});}
+ else if(name==='create_investment_asset_v3'){S.inv=S.inv||[];S.inv.push({id:localId,n:a.p_name,type:({bars:0,coins:1,jewelry:2,sovereigns:3,scrap:4,other:5})[a.p_subtype]??5,karat:Number(a.p_karat)||24,q0:Number(a.p_opening_quantity)||0,c0:Number(a.p_opening_cost)||0,cur:a.p_currency_code});}
+ else if(name==='post_financial_transaction'){
+  S.tx=S.tx||[];const types={income:'inc',expense:'exp',transfer:'trf',saving_deposit:'sav',saving_withdrawal:'sav',loan_payment:'pay',investment_buy:'buy',investment_sell:'sell'},t=types[a.p_type];
+  if(t){const ref=t==='trf'?a.p_destination_account_id:t==='sav'?a.p_related_goal_id:t==='pay'?a.p_related_loan_id:(t==='buy'||t==='sell')?a.p_related_investment_id:null;S.tx.push({id:localId,t,a:(a.p_type==='saving_withdrawal'?-1:1)*Number(a.p_amount),c:a.p_currency_code,d:a.p_occurred_on,acc:a.p_account_id,ref,cat:a.p_category_id?cloudCategoryIndex(a.p_category_id):0,ta:a.p_target_amount==null?null:Number(a.p_target_amount),tc:a.p_target_currency_code||a.p_currency_code,q:a.p_quantity==null?undefined:Number(a.p_quantity),note:a.p_note||'',rec:!!a.p_is_recurring});}
+ }
+ save();
+}
+function cloudQueueRpc(name,args){
+ const creates=['create_wallet_account','create_savings_goal_v2','create_loan_v2','create_investment_asset_v3'].includes(name),localId=(creates||name==='post_financial_transaction')?'local-'+cloudUid():null;
+ cloudPushQueue({id:cloudUid(),kind:'rpc',name,args:JSON.parse(JSON.stringify(args)),localId,created_at:new Date().toISOString()});
+ if(localId)cloudOptimisticRpc(name,args,localId);
+ CLOUD_LAST_QUEUED=true;CLOUD_OFFLINE=true;CLOUD_SYNC_ERROR='';cloudUpdateSyncButton();
+ return localId;
+}
+function cloudResolveRpcArgs(args){const map=cloudMapLoad(),out=JSON.parse(JSON.stringify(args||{}));for(const k of ['p_account_id','p_destination_account_id','p_related_goal_id','p_related_loan_id','p_related_investment_id'])if(out[k]!=null)out[k]=map[String(out[k])]||out[k];return out;}
+function cloudQueueBudget(b){const period=cloudBudgetPeriod(b);cloudPushQueue({id:cloudUid(),kind:'budget',categoryIndex:Number(b.ci),amount:Number(b.l),currencyCode:b.cur,period,created_at:new Date().toISOString()});S.bud=S.bud||[];S.bud.push({id:'local-'+cloudUid(),ci:Number(b.ci),l:Number(b.l),cur:b.cur,p:b.p||'m'});save();CLOUD_LAST_QUEUED=true;CLOUD_OFFLINE=true;}
+function cloudQueueProfile(payload){cloudPushQueue({id:'profile',kind:'profile',payload,created_at:new Date().toISOString()},'profile');CLOUD_PROFILE_FP=cloudProfileFingerprint();cloudUpdateSyncButton();}
+async function cloudEnsureClient(){
+ if(SB)return true;if(!navigator.onLine)return false;
+ if(!window.supabase||!window.supabase.createClient){
+  await new Promise((resolve,reject)=>{const existing=document.querySelector('script[data-supabase-sdk]');if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return;}const el=document.createElement('script');el.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0';el.dataset.supabaseSdk='1';el.onload=resolve;el.onerror=()=>reject(new Error('Could not load Supabase client library.'));document.head.appendChild(el);});
+ }
+ if(!window.supabase||!window.supabase.createClient)return false;
+ SB=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+ cloudBindAuthEvents();return true;
+}
+function cloudBindAuthEvents(){if(!SB||CLOUD_AUTH_BOUND)return;SB.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'&&CLOUD_USER){cloudClearCache();build();}if(event==='PASSWORD_RECOVERY')setTimeout(()=>cloudShowPasswordRecovery(),0);});CLOUD_AUTH_BOUND=true;}
+async function cloudSyncPending(silent=false,refreshAfter=true){
+ if(CLOUD_SYNCING||!CLOUD_USER||!navigator.onLine)return false;
+ if(!await cloudEnsureClient())return false;
+ let queue=cloudQueueLoad();if(!queue.length){CLOUD_OFFLINE=false;CLOUD_SYNC_ERROR='';cloudUpdateSyncButton();return true;}
+ CLOUD_SYNCING=true;CLOUD_OFFLINE=false;CLOUD_SYNC_ERROR='';cloudUpdateSyncButton();
+ try{
+  const {data:sessionData,error:sessionError}=await SB.auth.getSession();if(sessionError)throw sessionError;
+  if(!sessionData.session||sessionData.session.user.id!==CLOUD_USER.id)throw new Error('The saved cloud session does not match this device queue. Sign in to the same account before syncing.');
+  CLOUD_USER=sessionData.session.user;
+  if(queue.some(x=>x.kind==='budget'))await cloudLoadCategories();
+  const map=cloudMapLoad();
+  while(queue.length){
+   if(!navigator.onLine)throw new TypeError('Network connection was lost during synchronization.');
+   const item=queue[0];
+   if(item.kind==='rpc'){
+    const {data,error}=await SB.rpc(item.name,cloudResolveRpcArgs(item.args));if(error)throw error;
+    if(item.localId){const id=typeof data==='string'?data:(data&&data.id)||null;if(!id)throw new Error('The server did not return an ID for '+item.name+'. The change remains queued.');map[item.localId]=id;cloudMapSave(map);}
+   }else if(item.kind==='budget'){
+    const payload={user_id:CLOUD_USER.id,category_id:cloudCategoryId('expense',item.categoryIndex),amount:item.amount,currency_code:item.currencyCode,...item.period};
+    const {error}=await SB.from('budgets').upsert(payload,{onConflict:'user_id,category_id,period_year,period_month,period_type,period_week'});if(error)throw error;
+   }else if(item.kind==='profile'){
+    const {error}=await SB.from('profiles').update(item.payload).eq('id',CLOUD_USER.id);if(error)throw error;
+   }
+   queue.shift();cloudQueueSave(queue);
+  }
+  CLOUD_OFFLINE=false;CLOUD_SYNC_ERROR='';CLOUD_PROFILE_FP=cloudProfileFingerprint();
+  if(refreshAfter)await cloudRefresh(true);
+  return true;
+ }catch(e){
+  CLOUD_SYNC_ERROR=e&&e.message?e.message:String(e);CLOUD_OFFLINE=cloudLooksLikeNetworkError(e);
+  if(queue.length){queue[0].last_error=CLOUD_SYNC_ERROR;queue[0].attempts=(queue[0].attempts||0)+1;try{cloudQueueSave(queue)}catch(x){}}
+  if(!silent)toast((CLOUD_OFFLINE?'تم حفظ التغييرات محليًا وستتم المحاولة عند عودة الاتصال: ':'تعذرت المزامنة، بقيت التغييرات في الطابور: ')+CLOUD_SYNC_ERROR);
+  return false;
+ }finally{CLOUD_SYNCING=false;cloudUpdateSyncButton();}
+}
 function cloudLoanKind(k){return k==='owed'?'owed':'borrowed';}
 function cloudGoldSubtype(i){return ['bars','coins','jewelry','sovereigns','scrap','other'][Number(i)]||'other';}
 function cloudFxRate(c){const b=Number(S.rates[S.base]),r=Number(S.rates[c]);if(c===S.base)return 1;if(!(b>0)||!(r>0))throw new Error('Missing '+c+' to '+S.base+' exchange rate. Update exchange rates first.');return b/r;}
-async function cloudRpc(n,a){if(!SB||!CLOUD_USER)throw new Error('Sign in to your cloud account first.');const {data,error}=await SB.rpc(n,a);if(error)throw error;return data;}
+async function cloudRpc(n,a){if(!CLOUD_USER)throw new Error('Sign in to your cloud account first.');CLOUD_LAST_QUEUED=false;if(!navigator.onLine||CLOUD_OFFLINE||!SB)return cloudQueueRpc(n,a);try{const {data,error}=await SB.rpc(n,a);if(error)throw error;return data;}catch(e){if(!cloudLooksLikeNetworkError(e))throw e;return cloudQueueRpc(n,a);}}
 function cloudShowPasswordRecovery(){form(_('تعيين كلمة مرور جديدة|Set a new password'),[['p',_('كلمة المرور الجديدة|New password'),'password'],['c',_('تأكيد كلمة المرور|Confirm password'),'password']],async v=>{if((v.p||'').length<8){toast(_('كلمة المرور يجب أن تكون 8 أحرف على الأقل.|Password must be at least 8 characters.'));return false;}if(v.p!==v.c){toast(_('كلمتا المرور غير متطابقتين.|Passwords do not match.'));return false;}const {error}=await SB.auth.updateUser({password:v.p});if(error)throw error;toast(_('تم تحديث كلمة المرور.|Password updated.'));return true;});}
 async function cloudRows(t,c){let a=[],f=0;for(;;){const {data,error}=await SB.from(t).select(c||'*').range(f,f+999);if(error)throw error;a=a.concat(data||[]);if(!data||data.length<1000)break;f+=1000;}return a;}
 function cloudCategoryIndex(id){const c=CLOUD_CATEGORY_ROWS.find(x=>x.id===id);if(!c)return 12;const a=c.direction==='income'?CLOUD_INCOME_NAMES:CLOUD_EXPENSE_NAMES;const i=a.indexOf(c.name);return i<0?a.length-1:i;}
 function cloudCategoryId(d,i){const id=CLOUD_CATEGORY_IDS[d]&&CLOUD_CATEGORY_IDS[d][Number(i)];if(!id)throw new Error('A matching cloud '+d+' category is missing.');return id;}
-async function cloudLoadCategories(){CLOUD_CATEGORY_ROWS=await cloudRows('categories','id,name,direction');CLOUD_CATEGORY_IDS={income:CLOUD_INCOME_NAMES.map(n=>(CLOUD_CATEGORY_ROWS.find(c=>c.direction==='income'&&c.name===n)||{}).id),expense:CLOUD_EXPENSE_NAMES.map(n=>(CLOUD_CATEGORY_ROWS.find(c=>c.direction==='expense'&&c.name===n)||{}).id)};if(CLOUD_CATEGORY_IDS.income.some(x=>!x)||CLOUD_CATEGORY_IDS.expense.some(x=>!x))throw new Error('Default categories are incomplete in Supabase.');}
+async function cloudLoadCategories(){if(!navigator.onLine||!SB){if(CLOUD_USER&&cloudCategoryCacheLoad(CLOUD_USER.id))return CLOUD_CATEGORY_ROWS;throw new Error('Cloud categories are not cached on this device yet. Connect once to download them.');}CLOUD_CATEGORY_ROWS=await cloudRows('categories','id,name,direction');CLOUD_CATEGORY_IDS={income:CLOUD_INCOME_NAMES.map(n=>(CLOUD_CATEGORY_ROWS.find(c=>c.direction==='income'&&c.name===n)||{}).id),expense:CLOUD_EXPENSE_NAMES.map(n=>(CLOUD_CATEGORY_ROWS.find(c=>c.direction==='expense'&&c.name===n)||{}).id)};if(CLOUD_CATEGORY_IDS.income.some(x=>!x)||CLOUD_CATEGORY_IDS.expense.some(x=>!x))throw new Error('Default categories are incomplete in Supabase.');cloudCategoryCacheSave();return CLOUD_CATEGORY_ROWS;}
 function cloudProfileFingerprint(){return JSON.stringify({display_name:S.name||'',base_currency:S.base,language:S.lang});}
-function cloudPersistProfile(){if(!CLOUD_USER||CLOUD_LOADING||CLOUD_PROFILE_PENDING||cloudProfileFingerprint()===CLOUD_PROFILE_FP)return;const fp=cloudProfileFingerprint();CLOUD_PROFILE_PENDING=true;setTimeout(async()=>{try{const {error}=await SB.from('profiles').update({display_name:S.name||'',base_currency:S.base,language:S.lang}).eq('id',CLOUD_USER.id);if(error)throw error;CLOUD_PROFILE_FP=fp;}catch(e){toast('Profile sync failed: '+(e.message||String(e)));try{const {data}=await SB.from('profiles').select('display_name,base_currency,language').eq('id',CLOUD_USER.id).single();if(data){S.name=data.display_name||S.name;S.base=data.base_currency||S.base;S.lang=data.language||S.lang;CLOUD_PROFILE_FP=cloudProfileFingerprint();build();}}catch(x){}}finally{CLOUD_PROFILE_PENDING=false;if(CLOUD_USER&&cloudProfileFingerprint()!==CLOUD_PROFILE_FP)cloudPersistProfile();}},250);}
+function cloudPersistProfile(){if(!CLOUD_USER||CLOUD_LOADING||CLOUD_PROFILE_PENDING||cloudProfileFingerprint()===CLOUD_PROFILE_FP)return;const fp=cloudProfileFingerprint(),payload={display_name:S.name||'',base_currency:S.base,language:S.lang};if(!navigator.onLine||CLOUD_OFFLINE||!SB){cloudQueueProfile(payload);return;}CLOUD_PROFILE_PENDING=true;setTimeout(async()=>{try{const {error}=await SB.from('profiles').update(payload).eq('id',CLOUD_USER.id);if(error)throw error;CLOUD_PROFILE_FP=fp;}catch(e){if(cloudLooksLikeNetworkError(e)){cloudQueueProfile(payload);CLOUD_OFFLINE=true;}else toast('Profile sync failed: '+(e.message||String(e)));}finally{CLOUD_PROFILE_PENDING=false;if(CLOUD_USER&&cloudProfileFingerprint()!==CLOUD_PROFILE_FP)cloudPersistProfile();}},250);}
 function cloudImportSourceId(){let id;try{id=localStorage.getItem('wos_cloud_source_id');if(!id){id=crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);localStorage.setItem('wos_cloud_source_id',id);}}catch(e){id='session-'+Date.now().toString(36);}return id;}
 function cloudBackupKey(uid,sourceId=cloudImportSourceId()){return 'wos_pre_cloud_backup_'+uid+'_'+sourceId;}
 function cloudBackup(uid,sourceId=cloudImportSourceId()){const key=cloudBackupKey(uid,sourceId);try{if(!localStorage.getItem(key)){const c=JSON.parse(JSON.stringify(S));delete c.user;c.auth=false;c.localGuest=false;localStorage.setItem(key,JSON.stringify(c));}}catch(e){throw new Error('Could not preserve a local safety copy: '+e.message);}return key;}
@@ -623,7 +705,7 @@ function cloudLocalHasData(){const hasCollections=!!((S.tx&&S.tx.length)||(S.goa
 function cloudImportKey(sourceId,kind,id){return 'legacy-'+sourceId+'-'+kind+'-'+String(id);}
 function cloudKind(k){return({wallet:'mobile',savings:'savings',cash:'cash',bank:'bank',other:'other',card:'card'})[k]||'other';}
 function cloudBudgetPeriod(b){const n=new Date(),p=b.p||'m';let w=0,m=n.getMonth()+1;if(p==='w'){const d=new Date(Date.UTC(n.getFullYear(),n.getMonth(),n.getDate()));d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));w=Math.ceil((((d-new Date(Date.UTC(d.getUTCFullYear(),0,1)))/86400000)+1)/7);}else if(p==='y')m=1;return{period_year:n.getFullYear(),period_month:m,period_type:p,period_week:w};}
-async function cloudUpsertBudget(b){const payload={user_id:CLOUD_USER.id,category_id:cloudCategoryId('expense',b.ci),amount:Number(b.l),currency_code:b.cur,...cloudBudgetPeriod(b)};const {error}=await SB.from('budgets').upsert(payload,{onConflict:'user_id,category_id,period_year,period_month,period_type,period_week'});if(error)throw error;}
+async function cloudUpsertBudget(b){if(!navigator.onLine||CLOUD_OFFLINE||!SB){cloudQueueBudget(b);return;}const payload={user_id:CLOUD_USER.id,category_id:cloudCategoryId('expense',b.ci),amount:Number(b.l),currency_code:b.cur,...cloudBudgetPeriod(b)};try{const {error}=await SB.from('budgets').upsert(payload,{onConflict:'user_id,category_id,period_year,period_month,period_week'});if(error)throw error;}catch(e){if(!cloudLooksLikeNetworkError(e))throw e;CLOUD_OFFLINE=true;cloudQueueBudget(b);}}
 async function cloudPostTransaction(t,v){
  const a=S.accs.find(x=>String(x.id)===String(v.acc));if(!a)throw new Error('The selected wallet no longer exists.');if(a.cur!==v.c)throw new Error('The transaction currency must match the selected wallet ('+a.cur+').');
  let type=t,cat=null,dest=null,goal=null,loan=null,asset=null,ta=null,tc=null,tf=null,q=null,amount=Math.abs(Number(v.a));
@@ -633,7 +715,7 @@ async function cloudPostTransaction(t,v){
  if(t==='pay'){loan=S.loans.find(x=>String(x.id)===String(v.ref));if(!loan||loan.cur!==a.cur)throw new Error('The loan and wallet must use the same currency.');type='loan_payment';}
  if(t==='buy'||t==='sell'){asset=S.inv.find(x=>String(x.id)===String(v.ref));if(!asset||asset.cur!==a.cur)throw new Error('The investment and wallet must use the same currency.');type=t==='buy'?'investment_buy':'investment_sell';q=Number(v.q);}
  const id=await cloudRpc('post_financial_transaction',{p_type:type,p_amount:amount,p_currency_code:v.c,p_account_id:a.id,p_idempotency_key:cloudKey('app-tx'),p_category_id:cat,p_destination_account_id:dest?dest.id:null,p_related_goal_id:goal?goal.id:null,p_related_loan_id:loan?loan.id:null,p_related_investment_id:asset?asset.id:null,p_target_amount:ta,p_target_currency_code:tc,p_fx_rate_to_base:cloudFxRate(v.c),p_target_fx_rate_to_base:tf,p_quantity:q,p_occurred_on:v.d||TD,p_note:v.note||null,p_is_recurring:!!v.rec});
- await cloudRefresh();LASTID=id;return id;
+ if(CLOUD_LAST_QUEUED){LASTID=id;return id;}await cloudRefresh();LASTID=id;return id;
 }
 async function cloudCreateLegacy(snapshot,sourceId){
  await cloudLoadCategories();
@@ -662,8 +744,8 @@ async function cloudCreateLegacy(snapshot,sourceId){
 async function cloudImportSnapshot(snapshot,sourceId){cloudBackup(CLOUD_USER.id,sourceId);CLOUD_IMPORT_STATUS='running';try{localStorage.setItem('wos_cloud_import_'+CLOUD_USER.id,'running')}catch(e){}try{await cloudCreateLegacy(snapshot,sourceId);CLOUD_IMPORT_STATUS='done';try{localStorage.setItem('wos_cloud_import_'+CLOUD_USER.id,'done')}catch(e){}await cloudRefresh();toast('✓ Local financial data imported into your cloud account.');}catch(e){CLOUD_IMPORT_STATUS='partial';try{localStorage.setItem('wos_cloud_import_'+CLOUD_USER.id,'partial')}catch(x){}throw e;}}
 async function cloudImportLocal(){return cloudImportSnapshot(JSON.parse(JSON.stringify(S)),cloudImportSourceId());}
 async function cloudImportSavedBackup(){if(!CLOUD_USER)throw new Error('Sign in to your cloud account first.');const sourceId=cloudImportSourceId(),key=cloudBackupKey(CLOUD_USER.id,sourceId),raw=localStorage.getItem(key);if(!raw)throw new Error('No local safety backup was found on this device.');const snapshot=JSON.parse(raw);if(!confirm('Merge the saved local backup into this cloud account? Existing cloud entries remain. Imported records use device-specific idempotency keys to avoid duplicate retries.'))return;await cloudImportSnapshot(snapshot,sourceId);}
-async function cloudRefresh(){
- if(!CLOUD_USER)throw new Error('No cloud user is signed in.');CLOUD_LOADING=true;
+async function cloudRefresh(skipSync=false){
+ if(!CLOUD_USER)throw new Error('No cloud user is signed in.');if(!navigator.onLine||CLOUD_OFFLINE||!SB)return false;if(!skipSync&&cloudPendingCount()){await cloudSyncPending(true,false);if(CLOUD_OFFLINE||cloudPendingCount())return false;}CLOUD_LOADING=true;
  try{
   const uid=CLOUD_USER.id,q=await Promise.all([
    SB.from('profiles').select('display_name,base_currency,language').eq('id',uid).single(),
@@ -679,7 +761,7 @@ async function cloudRefresh(){
   const err=q.find(x=>x.error);if(err)throw err.error;
   const profile=q[0].data,accounts=q[1].data||[],goals=q[2].data||[],loans=q[3].data||[],assets=q[4].data||[],tx=q[5].data||[],cats=q[6].data||[],bud=q[7].data||[],trades=q[8].data||[];
   if(profile){S.name=profile.display_name||CLOUD_USER.user_metadata?.full_name||CLOUD_USER.email||S.name;S.base=profile.base_currency||S.base;S.lang=profile.language||S.lang;}
-  CLOUD_CATEGORY_ROWS=cats;CLOUD_CATEGORY_IDS={income:CLOUD_INCOME_NAMES.map(n=>(cats.find(c=>c.direction==='income'&&c.name===n)||{}).id),expense:CLOUD_EXPENSE_NAMES.map(n=>(cats.find(c=>c.direction==='expense'&&c.name===n)||{}).id)};
+  CLOUD_CATEGORY_ROWS=cats;CLOUD_CATEGORY_IDS={income:CLOUD_INCOME_NAMES.map(n=>(cats.find(c=>c.direction==='income'&&c.name===n)||{}).id),expense:CLOUD_EXPENSE_NAMES.map(n=>(cats.find(c=>c.direction==='expense'&&c.name===n)||{}).id)};cloudCategoryCacheSave();
   const ci=new Map(cats.map(c=>[c.id,cloudCategoryIndex(c.id)]));
   S.accs=accounts.map(a=>({id:a.id,n:a.name,t:a.kind==='mobile'?'wallet':a.kind,cur:a.currency_code,cloudBalance:Number(a.balance)||0}));
   S.goals=goals.map(g=>({id:g.id,n:g.name,target:Number(g.target_amount),cur:g.currency_code,stop:false,date:g.target_date}));
@@ -691,13 +773,13 @@ async function cloudRefresh(){
   S.tx=tx.filter(t=>types[t.type]).map(t=>{const k=types[t.type],ref=k==='trf'?t.destination_account_id:k==='sav'?t.related_goal_id:k==='pay'?t.related_loan_id:(k==='buy'||k==='sell')?t.related_investment_id:null;let amount=Number(t.amount);if(t.type==='saving_withdrawal')amount=-amount;return{id:t.id,t:k,a:amount,c:t.currency_code,d:t.occurred_on,acc:t.source_account_id,ref,cat:ci.get(t.category_id)??0,ta:t.target_amount==null?null:Number(t.target_amount),tc:t.target_currency_code||t.currency_code,q:t.quantity==null?undefined:Number(t.quantity),note:t.note||'',rec:!!t.is_recurring};});
   const currentMonth=new Date().getMonth()+1,currentYear=new Date().getFullYear(),currentWeek=cloudBudgetPeriod({p:'w'}).period_week;S.bud=bud.filter(b=>b.period_year===currentYear&&(b.period_type==='y'||(b.period_type==='m'&&b.period_month===currentMonth)||(b.period_type==='w'&&b.period_week===currentWeek))).map(b=>({id:b.id,ci:ci.get(b.category_id)??12,l:Number(b.amount),cur:b.currency_code,p:b.period_type||'m'}));
   S.user={email:CLOUD_USER.email,name:S.name||CLOUD_USER.email};S.auth=1;S.localGuest=false;S.cloudOwnerId=uid;CLOUD_PROFILE_FP=cloudProfileFingerprint();save();
- }finally{CLOUD_LOADING=false;}
+ }catch(e){if(cloudLooksLikeNetworkError(e))CLOUD_OFFLINE=true;throw e;}finally{CLOUD_LOADING=false;cloudUpdateSyncButton();}
 }
 async function cloudConnectUser(user){
  const cachedCloudIds=(S.accs||[]).some(a=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(a.id)));
  const sameCloudEmail=!!(S.user&&S.user.email&&user.email&&S.user.email.toLowerCase()===user.email.toLowerCase()&&!S.user.h&&!S.localGuest);
  const sameDeviceOwner=S.cloudOwnerId===user.id||cachedCloudIds||sameCloudEmail;
- CLOUD_USER=user;CLOUD_READY=false;const {data:profile,error}=await SB.from('profiles').select('display_name,base_currency,language').eq('id',user.id).single();if(error)throw error;
+ CLOUD_USER=user;CLOUD_READY=false;CLOUD_OFFLINE=false;const {data:profile,error}=await SB.from('profiles').select('display_name,base_currency,language').eq('id',user.id).single();if(error)throw error;
  if(profile){S.name=profile.display_name||user.user_metadata?.full_name||user.email||'';S.base=profile.base_currency||S.base;S.lang=profile.language||S.lang;}
  const sourceId=cloudImportSourceId();if(!sameDeviceOwner)cloudBackup(user.id,sourceId);
  const tables=['wallet_accounts','transactions','savings_goals','loans','investment_assets'],counts=await Promise.all(tables.map(t=>SB.from(t).select('id',{count:'exact',head:true})));const ce=counts.find(x=>x.error);if(ce)throw ce.error;
@@ -712,7 +794,7 @@ async function cloudConnectUser(user){
  }
  await cloudRefresh();CLOUD_READY=true;toast('✓ Secure cloud account connected.');
 }
-function cloudClearCache(){CLOUD_USER=null;CLOUD_READY=false;CLOUD_PROFILE_FP='';CLOUD_PROFILE_PENDING=false;S.auth=0;S.localGuest=false;S.user=null;S.cloudOwnerId=null;S.accs=[];S.tx=[];S.loans=[];S.goals=[];S.inv=[];S.bud=[];save();}
+function cloudClearCache(){CLOUD_USER=null;CLOUD_READY=false;CLOUD_OFFLINE=!navigator.onLine;CLOUD_PROFILE_FP='';CLOUD_PROFILE_PENDING=false;S.auth=0;S.localGuest=false;S.user=null;S.cloudOwnerId=null;S.accs=[];S.tx=[];S.loans=[];S.goals=[];S.inv=[];S.bud=[];save();}
 
 function addBud(){form(_('ميزانية|Budget'),[['ci',_('التصنيف|Category'),'s',CAT.map((s,i)=>[i,_(s)])],['l',_('الحد|Limit'),'number'],['cur',_('العملة|Currency'),'s',CUR,S.base],['p',_('الفترة|Period'),'s',[['m',_('شهرية|Monthly')],['w',_('أسبوعية|Weekly')],['y',_('سنوية|Yearly')]]]],async v=>{if(!(+v.l>0)){toast(_('أدخل الحد|Enter a limit'));return false}const item={id:uid(),...v,ci:+v.ci,l:+v.l};if(CLOUD_USER){await cloudUpsertBudget(item);await cloudRefresh();return true;}S.bud.push(item);return true})}
 const IC='<rect width="32" height="32" rx="10" fill="var(--sb)"/><path d="M7.2 12.3a3 3 0 0 1 3-3h14a1.8 1.8 0 0 1 1.8 1.8v12.1a2 2 0 0 1-2 2H9.2a2 2 0 0 1-2-2z" fill="none" stroke="var(--g2)" stroke-width="2.1" stroke-linejoin="round"/><path d="M7.5 13.4h18.3v2.3h-5.1a2.5 2.5 0 0 0 0 5h5.1" fill="none" stroke="var(--g2)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20.8" cy="18.2" r="1" fill="var(--g)"/>';
