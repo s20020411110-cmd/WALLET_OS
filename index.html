@@ -401,6 +401,24 @@ button,input,select,textarea{font:inherit}
 .gold-trend-selected b{color:var(--ink);font-size:14px;font-variant-numeric:tabular-nums}
 .gold-trend-selected small{color:var(--mut);font-size:10px}
 .gold-trend-note{font-size:10px;line-height:1.6;color:var(--mut)}
+.gold-daily-candle{cursor:pointer;transition:opacity .15s ease}
+.gold-daily-candle:hover,.gold-daily-candle.selected{opacity:.72}
+.gold-daily-candle.selected line{stroke-width:3}
+.pl-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:7px;border-bottom:1px solid var(--ln)}
+.pl-summary small{color:var(--mut);font-size:10px}
+.pl-summary b{font-size:17px;font-variant-numeric:tabular-nums}
+.pl-axis{display:flex;justify-content:space-between;margin-inline:38%;font-size:9px;color:var(--mut)}
+.pl-row{display:grid;grid-template-columns:minmax(80px,1fr) minmax(110px,1.6fr) minmax(120px,1.15fr);gap:10px;align-items:center;padding:5px 0}
+.pl-name{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.pl-track{height:15px;position:relative;background:var(--c);border:1px solid var(--ln);border-radius:99px;overflow:hidden}
+.pl-zero{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--mut);opacity:.7;z-index:1}
+.pl-bar{position:absolute;top:3px;height:7px;border-radius:99px}
+.pl-bar.up{background:#16a34a}.pl-bar.down{background:#dc2626}
+.pl-number{display:grid;gap:1px;text-align:end;font-variant-numeric:tabular-nums}
+.pl-number>b{font-size:11px}.pl-number small{font-size:8px;color:var(--mut);white-space:nowrap}
+.pl-number.up,.pl-summary .up{color:#16a34a}.pl-number.down,.pl-summary .down{color:#dc2626}
+@media(max-width:480px){.pl-row{grid-template-columns:minmax(65px,.8fr) minmax(70px,1fr) minmax(100px,1.2fr);gap:6px}.pl-number small{font-size:7px}.pl-name{font-size:10px}.pl-axis{margin-inline:36%;}}
+@media(prefers-reduced-motion:reduce){.gold-daily-candle{transition:none}}
 @media(prefers-reduced-motion:reduce){.gold-trend-line,.gold-trend-current{animation:none!important}.gold-trend-range button,.gold-trend-point{transition:none}}
 
 .gold-hero{display:flex;direction:ltr;align-items:center;justify-content:space-between;gap:13px;min-height:112px;padding:14px 16px!important;border:1px solid var(--ln)!important;border-radius:18px!important;background:linear-gradient(115deg,var(--c),var(--bg))!important;color:var(--ink)!important;overflow:hidden;position:relative}
@@ -499,92 +517,135 @@ function goldTrendMetrics(samples){
  const first=values[0],last=values[values.length-1],delta=last-first;
  return{direction:delta>0.005?1:delta<-.005?-1:0,delta,percent:first?delta/first*100:0,first,last,count:values.length};
 }
+function goldNormalizeDailyCandles(payload){
+ const input=Array.isArray(payload&&payload.points)?payload.points:[];
+ const byDay=new Map();
+ for(const point of input){
+  if(!point||typeof point!=='object')continue;
+  const rawDay=point.d||point.date||point.t;
+  let day='';
+  if(typeof rawDay==='number'||(typeof rawDay==='string'&&/^\d{10,13}$/.test(rawDay))){
+   const stamp=Number(rawDay),date=new Date(stamp<1e12?stamp*1000:stamp);
+   if(Number.isFinite(date.getTime()))day=date.toISOString().slice(0,10);
+  }else if(rawDay){
+   const candidate=String(rawDay);
+   day=/^\d{4}-\d{2}-\d{2}$/.test(candidate)?candidate:candidate.slice(0,10);
+  }
+  const o=Number(point.o),h=Number(point.h),l=Number(point.l),c=Number(point.c);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(day))continue;
+  if(![o,h,l,c].every(v=>Number.isFinite(v)&&v>0))continue;
+  if(h<Math.max(o,c)||l>Math.min(o,c)||h<l)continue;
+  byDay.set(day,{d:day,o,h,l,c});
+ }
+ return Array.from(byDay.values()).sort((a,b)=>a.d.localeCompare(b.d)).slice(-90);
+}
+function goldDailyMetrics(g){
+ const candles=Array.isArray(g&&g.dailyCandles)?g.dailyCandles:[];
+ const last=candles[candles.length-1],prior=candles.length>1?candles[candles.length-2].c:(last&&last.o)||0;
+ const current=Number(g&&g.usd)>0?Number(g.usd):(last?Number(last.c):0);
+ if(!(prior>0&&current>0))return{direction:0,delta:0,percent:0,previous:prior,current,count:candles.length};
+ const delta=current-prior;
+ return{direction:delta>0.005?1:delta<-.005?-1:0,delta,percent:delta/prior*100,previous:prior,current,count:candles.length};
+}
 const goldTrendChart=(g)=>{
- const saved=Array.isArray(g.history)&&g.history.length?g.history:(g.h||[]).map(usd=>({usd:Number(usd),observedAt:null,priceAt:null,source:'legacy'}));
- const all=saved.filter(p=>Number(p&&p.usd)>0).slice(-60);
- if(!all.length&&Number(g.usd)>0)all.push({usd:Number(g.usd),observedAt:g.t||null,priceAt:g.t||null,source:g.src||'snapshot'});
- const points=all.slice(-GOLD_RANGE),metrics=goldTrendMetrics(points),direction=metrics.direction;
+ const all=(Array.isArray(g.dailyCandles)?g.dailyCandles:[]).filter(p=>p&&p.d&&[p.o,p.h,p.l,p.c].every(v=>Number.isFinite(Number(v))&&Number(v)>0));
+ const points=all.slice(-GOLD_RANGE);
+ if(!points.length)return '<div class="market-empty"><span class="market-empty-icon">◷</span><b>'+_('لا تتوفر شموع يومية للسوق حاليًا|Daily market candles are not available yet')+'</b><small>'+_('تُجلب بيانات XAU/USD اليومية من مصدر السوق عند توفر الاتصال. لن نستبدلها بقراءات لحظية أو تاريخ تقديري.|Daily XAU/USD candles load from the market source when connected. Intraday samples or estimated history are not substituted.')+'</small></div>';
+ const metrics=goldDailyMetrics(g),direction=metrics.direction;
  const color=direction>0?'#16a34a':direction<0?'#dc2626':'#c18b35';
- const title=direction>0?_('اتجاه صاعد|Upward trend'):direction<0?_('اتجاه هابط|Downward trend'):_('الاتجاه غير محدد بعد|Trend not established yet');
+ const title=direction>0?_('صاعد اليوم|Up today'):direction<0?_('هابط اليوم|Down today'):_('تغير اليوم محدود أو غير محدد|Flat or not established today');
  const icon=direction>0?'↗':direction<0?'↘':'→';
- const sign=metrics.delta>0?'+':'';
- const gradient='goldTrend'+(seq++);
- const W=720,H=242,L=12,R=86,T=18,B=34,min=points.length?Math.min(...points.map(p=>Number(p.usd))):0,max=points.length?Math.max(...points.map(p=>Number(p.usd))):1,pad=(max-min)*.16||Math.max(max*.001,1),lo=Math.max(0,min-pad),hi=max+pad;
- const xx=i=>points.length===1?W-R-(W-R-L)/2:L+i/(points.length-1)*(W-L-R);
+ const W=720,H=252,L=14,R=88,T=18,B=34;
+ const min=Math.min(...points.map(p=>Number(p.l))),max=Math.max(...points.map(p=>Number(p.h)));
+ const pad=(max-min)*.12||Math.max(max*.001,1),lo=Math.max(0,min-pad),hi=max+pad;
+ const xx=i=>L+(i+.5)/(points.length||1)*(W-L-R);
  const yy=v=>T+(hi-v)/(hi-lo||1)*(H-T-B);
- const coords=points.map((p,i)=>[xx(i),yy(Number(p.usd))]);
- const path=coords.length>1?sm(coords):'';
- const area=path?path+' L '+xx(coords.length-1)+' '+(H-B)+' L '+xx(0)+' '+(H-B)+' Z':'';
+ const step=(W-L-R)/Math.max(1,points.length),bodyW=Math.max(3,Math.min(10,step*.56));
  const selected=GOLD_SELECTED>=0&&GOLD_SELECTED<points.length?GOLD_SELECTED:points.length-1;
  const chosen=points[selected];
- const stamp=p=>p&&p.observedAt?new Date(p.observedAt).toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit'}):_('وقت غير مسجل|Time not recorded');
- const selectedLabel=chosen?stamp(chosen):'—';
- const grids=[0,1,2,3].map(i=>{const y=T+i*(H-T-B)/3,n=hi-i*(hi-lo)/3;return '<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" class="market-grid"/><text x="'+(W-R+8)+'" y="'+(y+4)+'" text-anchor="start" class="market-axis">'+fm(n,'USD')+'</text>';}).join('');
- const circles=coords.map((p,i)=>'<circle data-a="goldPoint" data-v="'+i+'" class="gold-trend-point'+(i===selected?' selected':'')+'" cx="'+p[0]+'" cy="'+p[1]+'" r="'+(i===selected?5.5:3.7)+'"><title>'+fm(Number(points[i].usd),'USD')+' · '+stamp(points[i])+'</title></circle>').join('');
- const current=coords.length?'<circle class="gold-trend-current" cx="'+coords[selected][0]+'" cy="'+coords[selected][1]+'" r="10" fill="none" stroke="'+color+'" stroke-width="2"/>':'';
- const ranges=[12,30,60].map(n=>'<button type="button" class="'+(GOLD_RANGE===n?'active':'')+'" data-a="goldRange" data-v="'+n+'" aria-pressed="'+(GOLD_RANGE===n?'true':'false')+'">'+n+' '+_('قراءة|readings')+'</button>').join('');
+ const candles=points.map((p,i)=>{
+  const x=xx(i),yo=yy(Number(p.o)),yc=yy(Number(p.c)),yh=yy(Number(p.h)),yl=yy(Number(p.l));
+  const up=Number(p.c)>=Number(p.o),c=up?'#16a34a':'#dc2626';
+  const y=Math.min(yo,yc),height=Math.max(2,Math.abs(yc-yo));
+  const day=p.d||'';
+  const selectedClass=i===selected?' selected':'';
+  const titleText=day+' · O '+fm(Number(p.o),'USD')+' · H '+fm(Number(p.h),'USD')+' · L '+fm(Number(p.l),'USD')+' · C '+fm(Number(p.c),'USD');
+  return '<g data-a="goldPoint" data-v="'+i+'" class="gold-daily-candle'+selectedClass+'" style="cursor:pointer"><line x1="'+x+'" x2="'+x+'" y1="'+yh+'" y2="'+yl+'" stroke="'+c+'" stroke-width="2" stroke-linecap="round"/><rect x="'+(x-bodyW/2)+'" y="'+y+'" width="'+bodyW+'" height="'+height+'" rx="1.2" fill="'+c+'" stroke="'+c+'" stroke-width="1"><title>'+titleText+'</title></rect></g>';
+ }).join('');
+ const grids=[0,1,2,3].map(i=>{
+  const y=T+i*(H-T-B)/3,v=hi-i*(hi-lo)/3;
+  return '<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" class="market-grid"/><text x="'+(W-R+7)+'" y="'+(y+4)+'" text-anchor="start" class="market-axis">'+fm(v,'USD')+'</text>';
+ }).join('');
+ const dateLabel=d=>d?new Date(d+'T00:00:00Z').toLocaleDateString(LOC(),{month:'short',day:'numeric',timeZone:'UTC'}):'—';
+ const dayChange=chosen&&Number(chosen.o)>0?(Number(chosen.c)-Number(chosen.o))/Number(chosen.o)*100:0;
+ const daySign=dayChange>0?'+':'';
+ const selectedInfo=chosen?'<div><small>'+_('الشمعة المحددة|Selected daily candle')+' · '+dateLabel(chosen.d)+'</small><br><b>'+_('الإغلاق|Close')+' '+fm(Number(chosen.c),'USD')+'</b></div><small>O '+fm(Number(chosen.o),'USD')+' · H '+fm(Number(chosen.h),'USD')+' · L '+fm(Number(chosen.l),'USD')+'<br><span style="color:'+(dayChange>=0?'#16a34a':'#dc2626')+'">'+daySign+dayChange.toFixed(2)+'% '+_('خلال الجلسة|session change')+'</span></small>':'';
+ const ranges=[12,30,60].map(n=>'<button type="button" class="'+(GOLD_RANGE===n?'active':'')+'" data-a="goldRange" data-v="'+n+'" aria-pressed="'+(GOLD_RANGE===n?'true':'false')+'">'+n+' '+_('شمعة يومية|daily candles')+'</button>').join('');
  return '<div class="gold-trend" style="--gold-trend:'+color+'">'+
-  '<div class="gold-trend-head"><span class="gold-trend-status"><i>'+icon+'</i>'+title+'</span><div class="gold-trend-change">'+(metrics.count>1?sign+metrics.percent.toFixed(2)+'%':'—')+'</div></div>'+
-  '<div class="gold-trend-stats"><b>'+(metrics.count>1?(metrics.delta>0?'+':metrics.delta<0?'−':'')+fm(Math.abs(metrics.delta),'USD'):'—')+'</b><small>'+_('التغير بين أول وآخر قراءة · دولار/أونصة|Change from first to latest reading · USD/oz')+'</small></div>'+
+  '<div class="gold-trend-head"><span class="gold-trend-status"><i>'+icon+'</i>'+title+'</span><div class="gold-trend-change">'+(metrics.count&&metrics.previous>0?((metrics.delta>0?'+':'')+metrics.percent.toFixed(2)+'%'):'—')+'</div></div>'+
+  '<div class="gold-trend-stats"><b>'+_('XAU/USD · 1D')+'</b><small>'+_('كل شمعة تمثل يوم تداول واحدًا · السعر بالدولار لكل أونصة تروي|Each candle represents one trading day · USD per troy ounce')+'</small></div>'+
   '<div class="gold-trend-range">'+ranges+'</div>'+
-  '<svg class="gold-trend-chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+_('الرسم البياني لاتجاه الذهب مقابل الدولار|Gold price trend against the US dollar')+'">'+
-   '<defs><linearGradient id="'+gradient+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+color+'" stop-opacity=".24"/><stop offset="100%" stop-color="'+color+'" stop-opacity=".015"/></linearGradient></defs>'+
-   grids+(area?'<path d="'+area+'" class="gold-trend-area" fill="url(#'+gradient+')"/>':'')+
-   (path?'<path d="'+path+'" class="gold-trend-line" fill="none" stroke="'+color+'" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/>':'')+
-   circles+current+'</svg>'+
-  '<div class="gold-trend-selected"><div><small>'+_('القراءة المحددة|Selected observation')+' · '+selectedLabel+'</small><br><b>'+(chosen?fm(Number(chosen.usd),'USD'):'—')+'</b></div><small>'+(metrics.count>1?_('اضغط على أي نقطة لمعاينة سعرها|Tap any point to inspect its price'):_('نحتاج قراءتين على الأقل لتحديد اتجاه الصعود أو الهبوط|At least two observations are needed to determine direction'))+'</small></div>'+
-  '<div class="gold-trend-note">'+_('الاتجاه محسوب من أول وآخر قراءة محفوظة في النطاق المحدد. لا تُعرض بيانات تاريخية تقديرية.|Trend is calculated from the first and latest saved observations in the selected range. No synthetic historical data is shown.')+'</div>'+
+  '<svg class="gold-trend-chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+_('شموع الذهب اليومية في السوق العالمي XAU/USD|Global XAU/USD daily candlestick chart')+'">'+grids+candles+'</svg>'+
+  '<div class="gold-trend-selected">'+selectedInfo+'</div>'+
+  '<div class="market-chart-foot"><span>'+_('أقدم جلسة|Oldest session')+' · '+dateLabel(points[0].d)+'</span><span>'+_('أحدث جلسة|Latest session')+' · '+dateLabel(points[points.length-1].d)+'</span></div>'+
+  '<div class="gold-trend-note">'+_('المصدر: XAUS · بيانات OHLC يومية. السعر الفوري في البطاقة أعلاه مستقل عن إغلاق الشمعة اليومية.|Source: XAUS · daily OHLC data. The spot quote in the card above is separate from the daily candle close.')+'</div>'+
  '</div>';
 };
-
-
 const goldHeroCard=(g)=>{
- const stored=Array.isArray(g.history)&&g.history.length
-  ?g.history
-  :(g.h||[]).map(usd=>({usd:Number(usd),observedAt:null,source:'legacy'}));
- const limit=Math.max(2,Number(GOLD_RANGE)||12);
- const observations=stored.filter(p=>Number(p&&p.usd)>0).slice(-60);
- const last=observations[observations.length-1];
- if(Number(g.usd)>0&&(!last||Number(last.usd)!==Number(g.usd))){
-  observations.push({usd:Number(g.usd),observedAt:g.t||null,source:g.src||'snapshot'});
- }
- const points=observations.slice(-limit);
- const metrics=goldTrendMetrics(points),direction=metrics.direction;
+ const candles=(Array.isArray(g.dailyCandles)?g.dailyCandles:[]).slice(-12);
+ const metrics=goldDailyMetrics(g),direction=metrics.direction;
  const color=direction>0?'#16a34a':direction<0?'#dc2626':'#a1a1aa';
  const state=direction>0?'up':direction<0?'down':'flat';
  const arrow=direction>0?'↗':direction<0?'↘':'→';
  const price=v=>'$'+new Intl.NumberFormat(LOC(),{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(v)||0);
- const change=metrics.count>1?(metrics.percent>0?'+':'')+metrics.percent.toFixed(2)+'%':'—';
+ const change=metrics.count&&metrics.previous>0?(metrics.percent>0?'+':'')+metrics.percent.toFixed(2)+'%':'—';
  const source=({xaus:'XAUS','gold-api':'Gold API',snap:_('لقطة محفوظة|Saved snapshot'),manual:_('يدوي|Manual'),live:_('مباشر|Live')})[g.src]||g.src||_('غير معروف|Unknown');
- const date=g.t&&Number.isFinite(new Date(g.t).getTime())
-  ?new Date(g.t).toLocaleString(LOC(),{dateStyle:'medium',timeStyle:'short'})
-  :_('وقت التحديث غير متاح|Update time unavailable');
- const visual=points.slice(-14);
- let chart;
- if(visual.length>1){
-  const values=visual.map(p=>Number(p.usd)),min=Math.min(...values),max=Math.max(...values),range=max-min||Math.max(max*.001,1);
-  const W=160,base=59,step=W/visual.length;
-  const bars=values.map((v,i)=>{
-   const norm=(v-min)/range,height=11+norm*31,x=i*step+step*.25,w=Math.max(3,step*.5),y=base-height;
-   return '<g class="gold-hero-bar" style="animation-delay:'+i*38+'ms"><line x1="'+(x+w/2)+'" x2="'+(x+w/2)+'" y1="'+Math.max(5,y-6)+'" y2="'+(base+2)+'" stroke="'+color+'" stroke-width="2" stroke-linecap="round" opacity=".5"/><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+height+'" rx="'+Math.min(3,w/2)+'" fill="'+color+'" opacity="'+(.48+i/values.length*.48)+'"/></g>';
+ const date=g.t&&Number.isFinite(new Date(g.t).getTime())?new Date(g.t).toLocaleString(LOC(),{dateStyle:'medium',timeStyle:'short'}):_('وقت التحديث غير متاح|Update time unavailable');
+ let chart='';
+ if(candles.length){
+  const W=160,H=72,L=4,R=4,T=5,B=5,min=Math.min(...candles.map(p=>Number(p.l))),max=Math.max(...candles.map(p=>Number(p.h)));
+  const pad=(max-min)*.12||Math.max(max*.001,1),lo=Math.max(0,min-pad),hi=max+pad,step=(W-L-R)/candles.length,bw=Math.max(2,Math.min(5,step*.58));
+  const yy=v=>T+(hi-v)/(hi-lo||1)*(H-T-B);
+  const shapes=candles.map((p,i)=>{
+   const x=L+(i+.5)*step,o=yy(Number(p.o)),c=yy(Number(p.c)),h=yy(Number(p.h)),l=yy(Number(p.l)),up=Number(p.c)>=Number(p.o),tone=up?'#16a34a':'#dc2626',y=Math.min(o,c),bh=Math.max(1.6,Math.abs(c-o));
+   return '<g class="gold-hero-bar" style="animation-delay:'+i*28+'ms"><line x1="'+x+'" x2="'+x+'" y1="'+h+'" y2="'+l+'" stroke="'+tone+'" stroke-width="1.5"/><rect x="'+(x-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+bh+'" rx=".8" fill="'+tone+'"><title>'+p.d+' · O '+price(p.o)+' · H '+price(p.h)+' · L '+price(p.l)+' · C '+price(p.c)+'</title></rect></g>';
   }).join('');
-  const lastX=(values.length-.5)*step,lastH=11+(values[values.length-1]-min)/range*31,lastY=base-lastH;
-  chart='<svg class="gold-hero-chart" viewBox="0 0 160 72" role="img" aria-label="'+_('رسم مصغر للقراءات المحفوظة|Mini chart of saved gold readings')+'">'+bars+'<circle class="gold-hero-point" cx="'+lastX+'" cy="'+(lastY-2)+'" r="4" fill="'+color+'"/></svg>';
+  chart='<svg class="gold-hero-chart" viewBox="0 0 160 72" role="img" aria-label="'+_('شموع سعر الذهب اليومية XAU/USD|Daily XAU/USD gold candles')+'">'+shapes+'</svg>';
  }else{
-  chart='<div class="gold-hero-wait"><span>·</span><small>'+_('بانتظار قراءة ثانية لإظهار الاتجاه|Waiting for a second reading to show direction')+'</small></div>';
+  chart='<div class="gold-hero-wait"><span>·</span><small>'+_('بانتظار بيانات الشموع اليومية|Waiting for daily candle data')+'</small></div>';
  }
- const trendNote=metrics.count>1
-  ?_('التغير بين أول وآخر قراءة محفوظة|Change between first and latest saved reading')
-  :_('لا توجد قراءات كافية لحساب التغير|Not enough readings to calculate movement');
  return '<div class="cd gold-hero" style="--gold-hero-color:'+color+'">'+
   '<div class="gold-hero-copy">'+
-   '<div class="gold-hero-eyebrow"><i></i><span>'+_('سعر الذهب الفوري|Gold Spot')+' · XAU/USD</span></div>'+
+   '<div class="gold-hero-eyebrow"><i></i><span>'+_('سعر الذهب الفوري|Gold Spot')+' · XAU/USD · 1D</span></div>'+
    '<div class="gold-hero-price-line"><bdi class="gold-hero-price">'+price(g.usd)+'</bdi><span class="gold-hero-change '+state+'">'+arrow+' '+change+'</span></div>'+
    '<div class="gold-hero-foot"><span>'+_('دولار / أونصة ترويسية|USD / troy ounce')+'</span><span>'+source+' · '+date+'</span></div>'+
-   '<small class="gold-hero-trend-note">'+trendNote+'</small>'+
+   '<small class="gold-hero-trend-note">'+_('شموع يومية · كل شمعة = يوم تداول واحد|Daily candles · each candle = one trading day')+'</small>'+
   '</div>'+chart+
  '</div>';
 };
+function portfolioPLRows(assets){
+ return (assets||[]).map(({a,p})=>{
+  const unrealized=Number(p.v||0)-Number(p.c||0),realized=Number(p.pl||0);
+  return{name:String(a&&a.n||'—'),currency:a&&a.cur||S.base,unrealized:cv(unrealized,a&&a.cur||S.base),realized:cv(realized,a&&a.cur||S.base),total:cv(unrealized+realized,a&&a.cur||S.base)};
+ }).sort((a,b)=>Math.abs(b.total)-Math.abs(a.total));
+}
+const portfolioPLChart=assets=>{
+ const rows=portfolioPLRows(assets);
+ if(!rows.length)return '<div class="market-empty"><span class="market-empty-icon">±</span><b>'+_('لا توجد أصول استثمارية لاحتساب الربح والخسارة|No investment assets to calculate profit and loss')+'</b><small>'+_('أضف أصلًا ذهبيًا وسجّل عمليات الشراء والبيع|Add a gold asset and record its purchases and sales')+'</small></div>';
+ const total=rows.reduce((sum,row)=>sum+row.total,0),max=Math.max(1,...rows.map(row=>Math.abs(row.total)));
+ const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+ const list=rows.map(row=>{
+  const width=Math.max(0,Math.min(47,Math.abs(row.total)/max*47));
+  const positive=row.total>=0;
+  return '<div class="pl-row"><b class="pl-name" title="'+escapeHtml(row.name)+'">'+escapeHtml(row.name)+'</b>'+
+   '<div class="pl-track" role="img" aria-label="'+escapeHtml(row.name)+' · '+fm(row.total)+'"><span class="pl-zero"></span><i class="pl-bar '+(positive?'up':'down')+'" style="'+(positive?'left':'right')+':50%;width:'+width.toFixed(2)+'%"></i></div>'+
+   '<div class="pl-number '+(positive?'up':'down')+'"><b>'+fm(row.total)+'</b><small>'+_('محقق|Realized')+' '+fm(row.realized)+' · '+_('غير محقق|Unrealized')+' '+fm(row.unrealized)+'</small></div></div>';
+ }).join('');
+ return '<div class="portfolio-pl"><div class="pl-summary"><small>'+_('إجمالي الربح/الخسارة · محقق + غير محقق|Total P/L · realized + unrealized')+'</small><b class="'+(total>=0?'up':'down')+'">'+fm(total)+'</b></div>'+
+  '<div class="pl-axis"><span>'+_('خسارة|Loss')+'</span><span>0</span><span>'+_('ربح|Profit')+'</span></div>'+list+
+  '<div class="gold-trend-note">'+_('تُحسب القيم بسعر الذهب الفوري الأخير وبالعملة الأساسية. لا يمثّل الرسم أداءً تاريخيًا يوميًا.|Values use the latest gold spot quote and the base currency. This is not a historical daily performance series.')+'</div></div>';
+};
+
 const goldKaratStrip=g=>'<div class="gold-karat-strip">'+[24,22,21,18].map(k=>'<div class="gold-karat-cell"><small>'+k+'K / '+_('جرام|g')+'</small><b>'+fm(cv(gUSDg()*PUR[k],'USD',S.base))+'</b></div>').join('')+'</div>';
 
 const kc=(l,v,ch,sp,col,cls='',u='')=>`<div class="cd kc ${cls}"><small>${_(l)}</small><b class=n data-n="${v}" data-u="${u}">${u=='#'?v:u?v.toFixed(1)+u:fm(v)}</b><div class=ft>${ch||'<span></span>'}</div></div>`;
