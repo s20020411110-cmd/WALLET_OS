@@ -128,3 +128,12 @@ The built-in assistant uses the managed Vercel AI Gateway route with `google/gem
 The function exposes `GET /api/ai?health=1` for an OIDC connectivity and model-endpoint check without generating text or submitting financial data. A live model response can be tested from **Settings → AI configuration → Test connection** after signing in.
 
 Model pricing is variable and billed through the Gateway/provider account. Check the current model catalog and usage dashboard before enabling production usage at scale.
+
+
+## Gold market candles and portfolio profit/loss
+
+The Gold investment page separates two data views:
+
+- The gold price card and the market chart use XAUS `/api/v1/chart?symbol=xau&range=3mo&interval=1d` daily XAU/USD OHLC candles. Each candle is one trading day (open, high, low, close). The current spot quote shown in the price card remains a separate live quote; the card's daily change compares it with the previous daily close. The daily history is refreshed at most every six hours and stored locally; no intraday polling samples are converted into fake daily candles.
+- The lower portfolio chart is a current P/L breakdown by recorded gold asset. Each row sums realized P/L from sales and unrealized P/L from the remaining holding at the latest spot quote, converted into the app's base currency. It is a current snapshot, not a fabricated daily historical portfolio curve. Existing opening quantities/costs have no original acquisition date, so the app does not backfill a time series for them.
+- If daily OHLC data is unavailable, the chart shows an explicit empty state rather than synthesizing open/high/low prices. Historical candles and the current spot quote are intentionally kept separate.
