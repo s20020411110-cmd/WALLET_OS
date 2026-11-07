@@ -239,7 +239,7 @@ function makeGoldChartHelpers(html, state = { gold: { h: [] } }) {
     'sm', 'LOC', 'fm', '_', 'S',
     'let seq = 0, GOLD_RANGE = 30, GOLD_SELECTED = -1;\n' +
       source +
-      '\nreturn { goldRecordObservation, goldTrendMetrics, goldTrendChart };'
+      '\nreturn { goldRecordObservation, goldTrendMetrics, goldTrendChart, goldHeroCard };'
   );
   return factory(
     points => points.map((point, i) => (i ? 'L' : 'M') + point[0] + ',' + point[1]).join(' '),
@@ -286,4 +286,26 @@ test('gold price observations preserve legacy values and record observation time
   assert.equal(state.gold.history[0].observedAt, null);
   assert.equal(state.gold.history[2].priceAt, '2026-11-07T10:02:00.000Z');
   assert.equal(state.gold.history[2].source, 'xaus');
+});
+
+
+test('gold spot hero matches the compact dark market card and reflects real saved movement', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const { goldHeroCard } = makeGoldChartHelpers(html);
+  const rising = goldHeroCard({ history: [{ usd: 4000 }, { usd: 4050 }], usd: 4050, src: 'xaus', t: '2026-11-07T12:00:00Z' });
+  const falling = goldHeroCard({ history: [{ usd: 4072 }, { usd: 4050 }], usd: 4050, src: 'gold-api', t: '2026-11-07T12:00:00Z' });
+  const single = goldHeroCard({ history: [{ usd: 4050 }], usd: 4050, src: 'xaus' });
+  assert.ok(rising.includes('class="cd gold-hero"'));
+  assert.ok(rising.includes('class="gold-hero-change up"'));
+  assert.ok(rising.includes('+1.25%'));
+  assert.ok(rising.includes('#16a34a'));
+  assert.ok(rising.includes('gold-hero-chart'));
+  assert.ok(rising.includes('$4,050.00'));
+  assert.ok(falling.includes('class="gold-hero-change down"'));
+  assert.ok(falling.includes('-0.54%'));
+  assert.ok(falling.includes('#dc2626'));
+  assert.ok(single.includes('class="gold-hero-change flat"'));
+  assert.ok(single.includes('gold-hero-wait'));
+  assert.ok(single.includes('Not enough readings'));
+  assert.ok(!single.includes('0.00%'));
 });
