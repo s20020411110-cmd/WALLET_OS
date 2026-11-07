@@ -126,7 +126,6 @@ function makeOfflineSyncHarness(html, rpcImpl) {
   const engine = html.slice(start, end);
   const values = new Map();
   let nextId = 0;
-  let refreshCount = 0;
   const localStorage = {
     getItem(key) { return values.has(key) ? values.get(key) : null; },
     setItem(key, value) { values.set(key, String(value)); },
