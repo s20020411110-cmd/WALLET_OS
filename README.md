@@ -26,6 +26,23 @@ Do not open `index.html` using `file://`; the API route will not exist in that m
 
 Deploy this folder as a Vercel project. The `api/ai.js` function is deployed as a serverless route, and `index.html` is served as the app.
 
+## Market data sources
+
+- Aden exchange rates are fetched server-side from [exrye.com/aden](https://exrye.com/aden) through `/api/exchange-rates`. The route reads the source's buy/sell table and validates all eight listed currencies before returning data.
+- The app keeps the source buy and sell values for display. For indicative currency conversion, it derives the USD-based rates using the midpoint of each buy/sell pair. These are indicative market rates, not executable transfer quotes.
+- Exchange rates are refreshed once per Aden calendar day when the app is open. The last successful table is retained in the user's local app data if the source is temporarily unavailable. The Exchange page includes a manual refresh control and displays the fetch time.
+- Gold spot is requested from XAUS first (`/api/v1/spot?currency=USD&unit=gram&compact=1`), which returns the troy-ounce and gram values with freshness metadata. The app falls back to Gold API's `/price/XAU` endpoint if XAUS is unavailable. Gold is polled while the app is open; prices are not dealer buy/sell quotes.
+- Gold data providers: [XAUS API](https://xaus.com/api/) and [Gold API](https://gold-api.com/docs). The app retains the provider timestamp and marks stale data rather than presenting it as fresh.
+
+## Validation
+
+Run the exchange-rate parser tests with Node.js 20 or newer:
+
+```sh
+node --test tests/exchange-rates.test.js
+```
+
+
 ## API key handling
 
 - The API key is **not** embedded in the HTML, project ZIP, or `localStorage`.
