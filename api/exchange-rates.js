@@ -1,6 +1,19 @@
 const SOURCE_URL = 'https://exrye.com/aden';
 const CURRENCIES = Object.freeze(['AED', 'BHD', 'EUR', 'KWD', 'OMR', 'SAR', 'USD', 'YER']);
 
+const NATIVE_APP_ORIGIN = 'https://localhost';
+
+function applyNativeCors(req, res) {
+  const origin = String(req.headers && req.headers.origin || '').trim();
+  if (origin !== NATIVE_APP_ORIGIN) return false;
+  res.setHeader('Access-Control-Allow-Origin', NATIVE_APP_ORIGIN);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Max-Age', '600');
+  res.setHeader('Vary', 'Origin');
+  return true;
+}
+
 function json(res, status, body) {
   return res
     .status(status)
@@ -60,6 +73,12 @@ function parseRatesFromHtml(html) {
 }
 
 module.exports = async function exchangeRatesHandler(req, res) {
+  const nativeOrigin = applyNativeCors(req, res);
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Allow', 'GET, OPTIONS');
+    if (!nativeOrigin) return json(res, 403, { error: 'Cross-origin requests are not allowed.' });
+    return res.status(204).end();
+  }
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return json(res, 405, { error: 'Method not allowed.' });
