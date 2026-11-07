@@ -85,6 +85,7 @@ test('AI Gateway proxy calls the selected model with ZDR and returns the model r
     const payload = JSON.parse(modelCall.options.body);
     assert.equal(payload.model, 'google/gemini-3.1-flash-lite');
     assert.equal(payload.providerOptions.gateway.zeroDataRetention, true);
+    assert.equal(payload.providerOptions.gateway.disallowPromptTraining, true);
     assert.equal(payload.stream, false);
     assert.equal(payload.messages[0].content, 'Reply with exactly: WALLET OS connection OK');
   } finally {
@@ -113,4 +114,16 @@ test('AI Gateway proxy fails closed when Vercel OIDC is unavailable', async () =
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+
+test('gold hero card follows the active theme and remains compact', () => {
+  const html = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /\.gold-hero\{[^}]*background:linear-gradient\(115deg,var\(--c\),var\(--bg\)\)!important/);
+  assert.match(html, /\.gold-hero-price\{[^}]*color:var\(--ink\)/);
+  assert.match(html, /\.gold-hero-chart\{width:122px/);
+  assert.match(html, /--gold-hero-color/);
+  assert.match(html, /const AI_GATEWAY_MODEL='google\/gemini-3\.1-flash-lite'/);
+  assert.match(html, /provider:'vercel',model:AI_GATEWAY_MODEL/);
+  assert.match(html, /zeroDataRetention/);
 });
