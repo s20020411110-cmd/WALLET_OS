@@ -90,8 +90,23 @@ Supabase Security Advisor reported no findings after the schema changes. Perform
 
 The browser app now uses Supabase Auth (email/password sign-up, sign-in, session restore, sign-out and password reset) for cloud accounts. Financial reads use the owner-scoped Supabase tables and balance view; account, goal, loan, investment and budget creation are routed through the database API, and financial operations are posted through the atomic ledger RPC.
 
-On first sign-in, when the cloud account has no financial records, the app offers to import the local WALLET OS data. It writes a separate local safety copy first and uses deterministic idempotency keys for imported wallets, products and transactions. A partial import can be retried without duplicating records. Local guest mode remains device-only and does not sync.
+On first sign-in, when the cloud account has no financial records, the app offers to import the local WALLET OS data. It writes a separate local safety copy first and uses deterministic idempotency keys for imported wallets, products and transactions. A partial import can be retried without duplicating records. Guest mode remains device-only and does not sync. A previously authenticated cloud user can keep working from the local snapshot while offline, and the app queues supported changes for sync when the same account reconnects.
 
 The frontend embeds only the Supabase publishable key. No service-role or secret key is included in the browser source. Posted cloud ledger transactions are intentionally not editable or deletable through the old local UI; corrections need accounting reversal/correction workflows.
 
 See [supabase/README.md](supabase/README.md) for the hosted schema, RPC contract, import mapping and current validation record.
+
+
+## Offline-first use and cloud synchronization
+
+WALLET OS is a local-first web app. After it has been opened online once and the service worker has cached the application shell, the app can be reopened without internet. A previously authenticated cloud user can continue using the financial workspace from the last data snapshot stored in that browser.
+
+- Wallets, savings goals, loans, investment assets, budgets, profile preferences, and financial postings are written to the local device immediately.
+- Cloud changes made while offline are held in a per-user queue in browser storage. The queue preserves operation order, uses the existing idempotency/request keys, and maps temporary local IDs to server IDs as prerequisite records are created.
+- When the browser reports that it is online again, WALLET OS restores the saved Supabase session, sends queued changes in order, then refreshes the cloud snapshot. The Sync control in the app header can also trigger a manual sync.
+- Signed-in offline use requires that the user has signed in successfully on this browser before the connection is lost. A first-time sign-in, sign-up, password reset, or cloud import cannot be completed offline.
+- The browser's stored data is device-specific. Use the same browser profile to continue offline work. Clearing site data, browser storage eviction, or uninstalling the browser can remove the unsynchronized local queue; keep a separate backup for important data.
+- Market quotes and AI requests require an internet connection. Offline mode uses the last locally stored quote and does not present it as a newly refreshed market price.
+- The service worker caches only the public app shell and the pinned Supabase client library. It deliberately does not cache authenticated Supabase API responses, financial records, or /api/* responses.
+
+For multi-device changes, sync each device before switching to another one. Ledger postings are append-only and idempotent; profile changes are last-write-wins, and concurrent edits to the same budget may overwrite one another. The current app does not yet provide a general-purpose conflict-resolution screen.
