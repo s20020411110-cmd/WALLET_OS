@@ -92,8 +92,10 @@ A transaction-scoped integration test with temporary synthetic Auth identities w
 Successful test summary: 11 posted transactions, 11 journal entries, 24 journal lines; base-currency debits equalled credits. The enclosing test transaction was rolled back, leaving no test users or test finance records behind.
 
 Post-change Supabase Security Advisor: no findings.
-Post-change Performance Advisor: only informational unused-index findings on the empty database; the earlier unindexed-foreign-key findings were addressed.
+Post-change Performance Advisor: informational unused-index notices remain on the empty database; the earlier unindexed-foreign-key findings were addressed. The budget composite upsert conflict target was checked with EXPLAIN and lists the expected unique arbiter index.
 Post-change Health Advisor: no findings.
+
+The sync-integrity hardening migration was verified by reading back all four new unique indexes and checking that goal/loan v2 creation functions contain the owner-scoped advisory lock. A follow-up full Auth-backed integration SQL test was not completed in the final pass because the database execution gateway blocked the long test request; the prior rollback-only ledger integration test remains the successful full-posting test evidence.
 
 ## Browser integration
 
