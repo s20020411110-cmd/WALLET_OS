@@ -296,6 +296,8 @@ test('gold spot hero matches the compact dark market card and reflects real save
   const falling = goldHeroCard({ history: [{ usd: 4072 }, { usd: 4050 }], usd: 4050, src: 'gold-api', t: '2026-11-07T12:00:00Z' });
   const single = goldHeroCard({ history: [{ usd: 4050 }], usd: 4050, src: 'xaus' });
   assert.ok(rising.includes('class="cd gold-hero"'));
+  assert.match(html, /\.gold-hero\{display:flex;direction:ltr;/);
+  assert.match(html, /\.gold-hero-copy\{[^}]*direction:ltr;text-align:left\}/);
   assert.ok(rising.includes('class="gold-hero-change up"'));
   assert.ok(rising.includes('+1.25%'));
   assert.ok(rising.includes('#16a34a'));
