@@ -404,6 +404,7 @@ button,input,select,textarea{font:inherit}
 .gold-daily-candle{cursor:pointer;transition:opacity .15s ease}
 .gold-daily-candle:hover,.gold-daily-candle.selected{opacity:.72}
 .gold-daily-candle.selected line{stroke-width:3}
+.capital-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding-bottom:10px;border-bottom:1px solid var(--ln)}.capital-summary>div{display:grid;gap:3px;min-width:0}.capital-summary small,.capital-result small{font-size:9px;color:var(--mut)}.capital-summary b{font-size:15px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.capital-summary .up,.capital-result.up{color:#16a34a}.capital-summary .down,.capital-result.down{color:#dc2626}.capital-legend{display:flex;gap:16px;flex-wrap:wrap;padding:9px 0 3px;color:var(--mut);font-size:10px}.capital-legend span{display:flex;align-items:center;gap:6px}.capital-legend i{width:9px;height:9px;border-radius:3px;display:inline-block}.capital-legend i.invested,.capital-track i.invested{background:#8b9aa7}.capital-legend i.current,.capital-track i.current{background:var(--g)}.capital-row{display:grid;grid-template-columns:minmax(75px,.8fr) minmax(170px,2fr) minmax(90px,.8fr);gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--ln)}.capital-name{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.capital-bars{display:grid;gap:6px}.capital-bar-line{display:grid;grid-template-columns:68px minmax(35px,1fr) auto;align-items:center;gap:7px}.capital-bar-line small{font-size:9px;color:var(--mut);white-space:nowrap}.capital-bar-line>b{font-size:10px;font-variant-numeric:tabular-nums}.capital-track{height:9px;background:var(--c);border:1px solid var(--ln);border-radius:99px;overflow:hidden}.capital-track i{height:100%;display:block;border-radius:99px;min-width:0}.capital-result{display:grid;gap:2px;text-align:end;font-variant-numeric:tabular-nums}.capital-result>b{font-size:12px}.capital-chart .gold-trend-note{margin-top:10px}@media(max-width:560px){.capital-summary{grid-template-columns:1fr 1fr}.capital-summary>div:last-child{grid-column:1/-1}.capital-row{grid-template-columns:minmax(55px,.7fr) minmax(145px,2fr) minmax(78px,.8fr);gap:6px}.capital-bar-line{grid-template-columns:57px minmax(25px,1fr) auto;gap:4px}.capital-bar-line small{font-size:8px}.capital-bar-line>b{font-size:9px}.capital-result>b{font-size:10px}}
 .pl-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:7px;border-bottom:1px solid var(--ln)}
 .pl-summary small{color:var(--mut);font-size:10px}
 .pl-summary b{font-size:17px;font-variant-numeric:tabular-nums}
@@ -628,24 +629,30 @@ const goldHeroCard=(g)=>{
 function portfolioPLRows(assets){
  return (assets||[]).map(({a,p})=>{
   const unrealized=Number(p.v||0)-Number(p.c||0),realized=Number(p.pl||0);
-  return{name:String(a&&a.n||'—'),currency:a&&a.cur||S.base,unrealized:cv(unrealized,a&&a.cur||S.base),realized:cv(realized,a&&a.cur||S.base),total:cv(unrealized+realized,a&&a.cur||S.base)};
+  return{name:String(a&&a.n||'—'),currency:a&&a.cur||S.base,invested:cv(Number(p.c||0),a&&a.cur||S.base),current:cv(Number(p.v||0),a&&a.cur||S.base),unrealized:cv(unrealized,a&&a.cur||S.base),realized:cv(realized,a&&a.cur||S.base),total:cv(unrealized+realized,a&&a.cur||S.base)};
  }).sort((a,b)=>Math.abs(b.total)-Math.abs(a.total));
 }
 const portfolioPLChart=assets=>{
- const rows=portfolioPLRows(assets);
- if(!rows.length)return '<div class="market-empty"><span class="market-empty-icon">±</span><b>'+_('لا توجد أصول استثمارية لاحتساب الربح والخسارة|No investment assets to calculate profit and loss')+'</b><small>'+_('أضف أصلًا ذهبيًا وسجّل عمليات الشراء والبيع|Add a gold asset and record its purchases and sales')+'</small></div>';
- const total=rows.reduce((sum,row)=>sum+row.total,0),max=Math.max(1,...rows.map(row=>Math.abs(row.total)));
+ const rows=portfolioPLRows(assets).map(row=>({...row,invested:row.invested,current:row.current}));
+ if(!rows.length)return '<div class="market-empty"><span class="market-empty-icon">₪</span><b>'+_('لا توجد استثمارات مسجلة لعرض رأس المال والربح والخسارة|No investments are recorded to show invested capital and profit or loss')+'</b><small>'+_('أضف أصلًا استثماريًا وسجّل عمليات الشراء والبيع لعرض المبالغ المستثمرة وقيمتها الحالية.|Add an investment and record purchases and sales to see invested amounts and their current value.')+'</small></div>';
+ const invested=rows.reduce((sum,row)=>sum+row.invested,0);
+ const current=rows.reduce((sum,row)=>sum+row.current,0);
+ const realized=rows.reduce((sum,row)=>sum+row.realized,0);
+ const total=rows.reduce((sum,row)=>sum+row.total,0);
+ const max=Math.max(1,...rows.flatMap(row=>[row.invested,row.current]));
  const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
  const list=rows.map(row=>{
-  const width=Math.max(0,Math.min(47,Math.abs(row.total)/max*47));
+  const investedWidth=Math.max(0,Math.min(100,row.invested/max*100));
+  const currentWidth=Math.max(0,Math.min(100,row.current/max*100));
   const positive=row.total>=0;
-  return '<div class="pl-row"><b class="pl-name" title="'+escapeHtml(row.name)+'">'+escapeHtml(row.name)+'</b>'+
-   '<div class="pl-track" role="img" aria-label="'+escapeHtml(row.name)+' · '+fm(row.total)+'"><span class="pl-zero"></span><i class="pl-bar '+(positive?'up':'down')+'" style="'+(positive?'left':'right')+':50%;width:'+width.toFixed(2)+'%"></i></div>'+
-   '<div class="pl-number '+(positive?'up':'down')+'"><b>'+fm(row.total)+'</b><small>'+_('محقق|Realized')+' '+fm(row.realized)+' · '+_('غير محقق|Unrealized')+' '+fm(row.unrealized)+'</small></div></div>';
+  return '<div class="capital-row"><b class="capital-name" title="'+escapeHtml(row.name)+'">'+escapeHtml(row.name)+'</b>'+
+   '<div class="capital-bars"><div class="capital-bar-line"><small>'+_('المستثمر|Invested')+'</small><span class="capital-track"><i class="invested" style="width:'+investedWidth.toFixed(2)+'%"></i></span><b>'+fm(row.invested)+'</b></div>'+
+   '<div class="capital-bar-line"><small>'+_('القيمة الحالية|Current value')+'</small><span class="capital-track"><i class="current" style="width:'+currentWidth.toFixed(2)+'%"></i></span><b>'+fm(row.current)+'</b></div></div>'+
+   '<div class="capital-result '+(positive?'up':'down')+'"><b>'+fm(row.total)+'</b><small>'+_('الربح/الخسارة الكلي|Total P/L')+'</small></div></div>';
  }).join('');
- return '<div class="portfolio-pl"><div class="pl-summary"><small>'+_('إجمالي الربح/الخسارة · محقق + غير محقق|Total P/L · realized + unrealized')+'</small><b class="'+(total>=0?'up':'down')+'">'+fm(total)+'</b></div>'+
-  '<div class="pl-axis"><span>'+_('خسارة|Loss')+'</span><span>0</span><span>'+_('ربح|Profit')+'</span></div>'+list+
-  '<div class="gold-trend-note">'+_('تُحسب القيم بسعر الذهب الفوري الأخير وبالعملة الأساسية. لا يمثّل الرسم أداءً تاريخيًا يوميًا.|Values use the latest gold spot quote and the base currency. This is not a historical daily performance series.')+'</div></div>';
+ return '<div class="portfolio-pl capital-chart"><div class="capital-summary"><div><small>'+_('إجمالي المبالغ المستثمرة|Total invested capital')+'</small><b>'+fm(invested)+'</b></div><div><small>'+_('القيمة الحالية للاستثمارات|Current investment value')+'</small><b>'+fm(current)+'</b></div><div><small>'+_('الربح/الخسارة الكلي · شامل المحقق|Total P/L · including realized')+'</small><b class="'+(total>=0?'up':'down')+'">'+fm(total)+'</b></div></div>'+
+  '<div class="capital-legend"><span><i class="invested"></i>'+_('المبلغ المستثمر|Invested amount')+'</span><span><i class="current"></i>'+_('القيمة الحالية|Current value')+'</span></div>'+list+
+  '<div class="gold-trend-note">'+_('يعرض الرسم رأس المال المستثمر مقابل القيمة الحالية لكل أصل، مع احتساب الربح/الخسارة المحقق وغير المحقق. لا يعرض سعر الذهب العالمي أو حركة XAU/USD.|This chart compares invested capital with current value for each asset and includes realized and unrealized profit/loss. It does not show the global gold price or XAU/USD movement.')+'</div></div>';
 };
 
 const goldKaratStrip=g=>'<div class="gold-karat-strip">'+[24,22,21,18].map(k=>'<div class="gold-karat-cell"><small>'+k+'K / '+_('جرام|g')+'</small><b>'+fm(cv(gUSDg()*PUR[k],'USD',S.base))+'</b></div>').join('')+'</div>';
@@ -734,7 +741,7 @@ PG.invest=()=>{
  }).join('')||'<tr><td colspan=7 class=em>'+_('لا ذهب مسجل|No gold yet')+'</td></tr>';
  return hd('الذهب — ذكاء الاستثمار|Gold — investment intelligence','محفظتك من الذهب فقط، مسعّرة بالأونصة العالمية|A gold-only portfolio priced off the global ounce',controls)+
   goldHeroCard(g)+goldKaratStrip(g)+
-  '<div class="cd market-card"><div class="market-title"><div><h4>'+_('حركة الذهب في البورصة العالمية|Global gold market movement')+'</h4><small>'+_('XAU / USD · شموع يومية · 1D|XAU / USD · Daily candles · 1D')+'</small></div><span class="market-live '+(LV.ok?'is-live':'')+'"><i></i>'+(LV.ok?_('السعر الفوري متصل|Spot connected'):_('آخر سعر محفوظ|Last saved spot'))+'</span></div>'+goldTrendChart(g)+'</div>'+
+  '<div class="cd market-card investment-capital-card"><div class="market-title"><div><h4>'+_('رأس المال المستثمر والربح والخسارة|Invested capital and portfolio profit/loss')+'</h4><small>'+_('مقارنة المبالغ المستثمرة بالقيمة الحالية للمحفظة|Invested amounts compared with current portfolio value')+'</small></div><span class="market-live"><i></i>'+_('بيانات المحفظة|Portfolio data')+'</span></div>'+portfolioPLChart(A)+'</div>'+
   '<div class="g k">'+kc('قيمة المحفظة|Portfolio value',v,'',null,'var(--g)')+kc('الأرباح/الخسائر|Total P/L',pl,chip(roi),null,pl>=0?'#16a34a':'#dc2626')+kc('ذهب صافٍ|Pure gold',gr,'',null,'var(--g)','',' g')+'</div>'+
   '<div class="g c2 q"><div class=cd><h4>'+_('ربح وخسارة المحفظة حسب الأصل|Portfolio P/L by asset')+'</h4>'+portfolioPLChart(A)+'</div><div class=cd><h4>'+_('توزيع الذهب|Gold allocation')+'</h4>'+donut(by)+'</div></div>'+
   '<div class=cd><div class=sc><table><thead><tr>'+headers+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
