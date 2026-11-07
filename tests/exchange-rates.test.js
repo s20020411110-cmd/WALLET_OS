@@ -91,3 +91,29 @@ test('income and expense form types are translated to the ledger RPC contract', 
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   assert.match(html, /if\(t==='inc'\|\|t==='exp'\)\{type=t==='inc'\?'income':'expense';cat=cloudCategoryId\(type,v\.cat\);\}/);
 });
+
+
+test('local-first cloud queue supports offline writes and dependent record IDs', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.ok(html.includes("wos_sync_queue_v1_"));
+  assert.ok(html.includes('function cloudQueueRpc('));
+  assert.ok(html.includes('function cloudResolveRpcArgs('));
+  assert.ok(html.includes('async function cloudSyncPending('));
+  assert.ok(html.includes('cloudMapSave(map)'));
+  assert.ok(html.includes("addEventListener('online'"));
+  assert.ok(html.includes('data-a=sync'));
+});
+
+test('PWA shell caches only app files and the pinned Supabase client, not private API responses', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'manifest.webmanifest'), 'utf8'));
+  assert.ok(html.includes('rel="manifest" href="/manifest.webmanifest"'));
+  assert.ok(html.includes("serviceWorker.register('/sw.js'"));
+  assert.equal(manifest.display, 'standalone');
+  assert.ok(manifest.icons.some(icon => icon.src === '/icon.svg'));
+  assert.ok(sw.includes('caches.open(CACHE_NAME)'));
+  assert.ok(sw.includes("url.hostname.endsWith('.supabase.co')"));
+  assert.ok(sw.includes("url.pathname.startsWith('/api/')"));
+  assert.ok(sw.includes('supabase-js@2.119.0'));
+});
