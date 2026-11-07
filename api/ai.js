@@ -32,6 +32,12 @@ function getHeader(req, name) {
   return String(headers[name] || headers[name.toLowerCase()] || '').trim();
 }
 
+function getVercelOidcToken(req) {
+  const runtimeToken = typeof process !== 'undefined' && process.env
+    ? process.env.VERCEL_OIDC_TOKEN : '';
+  return String(runtimeToken || getVercelOidcToken(req) || '').trim();
+}
+
 function readBody(req) {
   let body = req.body;
   if (typeof body === 'string') {
@@ -112,7 +118,7 @@ async function verifySupabaseUser(req) {
 }
 
 async function gatewayHealth(req, res) {
-  const oidcToken = getHeader(req, 'x-vercel-oidc-token');
+  const oidcToken = getVercelOidcToken(req);
   if (!oidcToken) {
     return json(res, 503, {
       ok: false,
@@ -178,7 +184,7 @@ module.exports = async function handler(req, res) {
       return json(res, 429, { error: 'AI request limit reached. Wait one minute before trying again.' });
     }
 
-    const oidcToken = getHeader(req, 'x-vercel-oidc-token');
+    const oidcToken = getVercelOidcToken(req);
     if (!oidcToken) {
       return json(res, 503, {
         error: 'Vercel AI Gateway authentication is unavailable for this deployment. The OIDC token was not attached.'
