@@ -616,7 +616,7 @@ function cloudQueueSave(q){localStorage.setItem(cloudQueueKey(),JSON.stringify(q
 function cloudMapLoad(){try{return JSON.parse(localStorage.getItem(cloudMapKey())||'{}')||{}}catch(e){return{};}}
 function cloudMapSave(m){localStorage.setItem(cloudMapKey(),JSON.stringify(m));}
 function cloudPendingCount(){try{return cloudQueueLoad().length}catch(e){return 0;}}
-function cloudUpdateSyncButton(){const b=document.querySelector('[data-a=sync]');if(!b)return;const n=cloudPendingCount();b.textContent=CLOUD_SYNCING?'↻':CLOUD_OFFLINE?'◌':n?'⇅ '+n:'✓';b.title=CLOUD_OFFLINE?'Offline · changes saved on this device':n+' change(s) waiting to sync':'Cloud sync is up to date';b.setAttribute('aria-label',b.title);}
+function cloudUpdateSyncButton(){const b=document.querySelector('[data-a=sync]');if(!b)return;const n=cloudPendingCount();b.textContent=CLOUD_SYNCING?'↻':CLOUD_OFFLINE?'◌':n?'⇅ '+n:'✓';b.title=CLOUD_OFFLINE?'Offline · changes saved on this device':n?n+' change(s) waiting to sync':'Cloud sync is up to date';b.setAttribute('aria-label',b.title);}
 function cloudLooksLikeNetworkError(e){return !navigator.onLine||e instanceof TypeError||/failed to fetch|network|offline|load failed|connection|timed? ?out|socket|aborted/i.test(String(e&&e.message||e||''));}
 function cloudPushQueue(item,coalesce){const q=cloudQueueLoad();if(coalesce){for(let i=q.length-1;i>=0;i--)if(q[i].kind===coalesce)q.splice(i,1);}q.push(item);cloudQueueSave(q);return item;}
 function cloudCategoryCacheSave(){if(!CLOUD_USER)return;try{localStorage.setItem(CLOUD_CATEGORY_PREFIX+CLOUD_USER.id,JSON.stringify({rows:CLOUD_CATEGORY_ROWS,ids:CLOUD_CATEGORY_IDS}));}catch(e){}}
