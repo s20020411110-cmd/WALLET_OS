@@ -244,7 +244,12 @@ function makeGoldChartHelpers(html, state = { base: 'USD', gold: { h: [] } }) {
   return factory(
     points => points.map((point, i) => (i ? 'L' : 'M') + point[0] + ',' + point[1]).join(' '),
     () => 'en-US',
-    (value, currency) => currency === 'USD' ? '
+    (value, currency) => currency === 'USD' ? '$' + Number(value).toFixed(2) : String(value),
+    value => value.split('|')[1] || value.split('|')[0],
+    state,
+    value => Number(value)
+  );
+}
 
 test('gold movement metrics distinguish upward, downward, flat and insufficient histories', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
