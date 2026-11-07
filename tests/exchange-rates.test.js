@@ -230,23 +230,105 @@ test('offline sync retries a lost response with the same idempotency key', async
 });
 
 
-function makeGoldChartHelpers(html, state = { gold: { h: [] } }) {
+function makeGoldChartHelpers(html, state = { base: 'USD', gold: { h: [] } }) {
   const start = html.indexOf('function goldRecordObservation(');
   const end = html.indexOf('\nconst kc=', start);
   assert.ok(start >= 0 && end > start, 'gold trend chart helpers should exist');
   const source = html.slice(start, end);
   const factory = new Function(
-    'sm', 'LOC', 'fm', '_', 'S',
+    'sm', 'LOC', 'fm', '_', 'S', 'cv',
     'let seq = 0, GOLD_RANGE = 30, GOLD_SELECTED = -1;\n' +
       source +
-      '\nreturn { goldRecordObservation, goldTrendMetrics, goldTrendChart, goldHeroCard };'
+      '\nreturn { goldRecordObservation, goldTrendMetrics, goldNormalizeDailyCandles, goldDailyMetrics, goldTrendChart, goldHeroCard, portfolioPLRows, portfolioPLChart };'
   );
   return factory(
     points => points.map((point, i) => (i ? 'L' : 'M') + point[0] + ',' + point[1]).join(' '),
     () => 'en-US',
-    (value, currency) => currency === 'USD' ? '$' + Number(value).toFixed(2) : String(value),
+    (value, currency) => currency === 'USD' ? '
+
+test('gold movement metrics distinguish upward, downward, flat and insufficient histories', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const { goldTrendMetrics } = makeGoldChartHelpers(html);
+  assert.equal(goldTrendMetrics([{ usd: 4000 }, { usd: 4050 }]).direction, 1);
+  assert.equal(goldTrendMetrics([{ usd: 4072 }, { usd: 4050 }]).direction, -1);
+  assert.equal(goldTrendMetrics([{ usd: 4072 }, { usd: 4072 }]).direction, 0);
+  assert.equal(goldTrendMetrics([{ usd: 4072 }]).direction, 0);
+  assert.equal(goldTrendMetrics([{ usd: 4000 }, { usd: 4050 }]).percent, 1.25);
+});
+
+test('daily gold chart renders authentic OHLC candles with one trading day per candle', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const { goldNormalizeDailyCandles, goldTrendChart, goldDailyMetrics } = makeGoldChartHelpers(html);
+  const candles = goldNormalizeDailyCandles({ points: [
+    { d: '2026-11-04', o: 4000, h: 4040, l: 3980, c: 4020 },
+    { d: '2026-11-05', o: 4020, h: 4060, l: 4010, c: 4045 },
+    { d: '2026-11-06', o: 4045, h: 4050, l: 3990, c: 4000 },
+    { d: '2026-11-07', o: 4000, h: 4080, l: 3995, c: 4070 },
+    { d: '2026-11-07', o: 4000, h: 4080, l: 3995, c: 4070 },
+    { d: '2026-11-08', o: 4070, h: 4060, l: 4065, c: 4050 }
+  ] });
+  assert.equal(candles.length, 4);
+  assert.equal(candles[0].d, '2026-11-04');
+  assert.equal(candles.at(-1).c, 4070);
+  const chart = goldTrendChart({ dailyCandles: candles, usd: 4070 });
+  assert.ok(chart.includes('XAU/USD · 1D'));
+  assert.ok(chart.includes('Each candle represents one trading day'));
+  assert.ok(chart.includes('data-a="goldPoint"'));
+  assert.ok(chart.includes('<line'));
+  assert.ok(chart.includes('<rect'));
+  assert.ok(chart.includes('2026-11-07'));
+  assert.equal(goldDailyMetrics({ dailyCandles: candles, usd: 4070 }).direction, 1);
+  assert.ok(!chart.includes('saved observations'));
+});
+
+test('daily candle validator rejects incomplete OHLC rows instead of fabricating missing opens', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const { goldNormalizeDailyCandles } = makeGoldChartHelpers(html);
+  const valid = goldNormalizeDailyCandles({ points: [
+    { t: 1794009600, o: 4000, h: 4020, l: 3990, c: 4010 },
+    { d: '2026-11-06', o: 4050, h: 4040, l: 4020, c: 4030 },
+    { d: 'invalid-date', o: 1, h: 2, l: 0.5, c: 1.5 },
+    { d: '2026-11-07', h: 4080, l: 4000, c: 4050 }
+  ] });
+  assert.equal(valid.length, 1);
+  assert.equal(valid[0].o, 4000);
+});
+test('gold price observations preserve legacy values and record observation time and source', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const state = { gold: { h: [4000, 4010] } };
+  const { goldRecordObservation } = makeGoldChartHelpers(html, state);
+  goldRecordObservation(4020, '2026-11-07T10:02:00.000Z', 'xaus');
+  assert.deepEqual(state.gold.h, [4000, 4010, 4020]);
+  assert.equal(state.gold.history.length, 3);
+  assert.equal(state.gold.history[0].observedAt, null);
+  assert.equal(state.gold.history[2].priceAt, '2026-11-07T10:02:00.000Z');
+  assert.equal(state.gold.history[2].source, 'xaus');
+});
+
+
+test('gold price card uses daily candlesticks, not rapid saved spot samples', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const { goldHeroCard } = makeGoldChartHelpers(html);
+  const candles = [
+    { d: '2026-11-06', o: 4000, h: 4060, l: 3990, c: 4020 },
+    { d: '2026-11-07', o: 4020, h: 4080, l: 4010, c: 4070 }
+  ];
+  const card = goldHeroCard({ dailyCandles: candles, history: [{ usd: 10 }, { usd: 50000 }], usd: 4070, src: 'xaus', t: '2026-11-07T12:00:00Z' });
+  assert.ok(card.includes('XAU/USD · 1D'));
+  assert.ok(card.includes('Daily candles'));
+  assert.ok(card.includes('gold-hero-chart'));
+  assert.ok(card.includes('2026-11-07'));
+  assert.ok(card.includes('$4,070.00'));
+  assert.ok(card.includes('class="gold-hero-change up"'));
+  assert.ok(!card.includes('$50,000.00'));
+  const noCandles = goldHeroCard({ history: [{ usd: 4000 }, { usd: 4050 }], usd: 4050 });
+  assert.ok(noCandles.includes('Waiting for daily candle data'));
+  assert.ok(noCandles.includes('gold-hero-wait'));
+});
+ + Number(value).toFixed(2) : String(value),
     value => value.split('|')[1] || value.split('|')[0],
-    state
+    state,
+    value => Number(value)
   );
 }
 
@@ -310,4 +392,36 @@ test('gold spot hero matches the compact dark market card and reflects real save
   assert.ok(single.includes('gold-hero-wait'));
   assert.ok(single.includes('Not enough readings'));
   assert.ok(!single.includes('0.00%'));
+});
+
+test('portfolio P/L chart separates realized and unrealized gains and losses by asset', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const { portfolioPLRows, portfolioPLChart } = makeGoldChartHelpers(html);
+  const assets = [
+    { a: { n: 'Gold bar', cur: 'USD' }, p: { v: 1450, c: 1000, pl: 120 } },
+    { a: { n: 'Gold coin', cur: 'USD' }, p: { v: 800, c: 1000, pl: -50 } }
+  ];
+  const rows = portfolioPLRows(assets);
+  assert.equal(rows[0].total, 570);
+  assert.equal(rows[0].unrealized, 450);
+  assert.equal(rows[0].realized, 120);
+  assert.equal(rows[1].total, -250);
+  const chart = portfolioPLChart(assets);
+  assert.ok(chart.includes('Total P/L'));
+  assert.ok(chart.includes('Realized'));
+  assert.ok(chart.includes('Unrealized'));
+  assert.ok(chart.includes('Gold bar'));
+  assert.ok(chart.includes('Gold coin'));
+  assert.ok(chart.includes('pl-bar up'));
+  assert.ok(chart.includes('pl-bar down'));
+  assert.ok(chart.includes('$320.00'));
+});
+
+test('investment page binds the lower chart and summary to total realized plus unrealized P/L', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /plRows=portfolioPLRows\(A\),pl=Z\(plRows\.map\(row=>row\.total\)\)/);
+  assert.match(html, /portfolioPLChart\(A\)/);
+  assert.match(html, /const unrealized=p\.v-p\.c,total=unrealized\+p\.pl/);
+  assert.match(html, /interval=1d/);
+  assert.match(html, /symbol=xau&range=3mo&interval=1d/);
 });
