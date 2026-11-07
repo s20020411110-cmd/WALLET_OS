@@ -211,10 +211,14 @@ module.exports = async function handler(req, res) {
 
       const data = await upstream.json().catch(() => null);
       if (!upstream.ok) {
-        const message = data && data.error && typeof data.error.message === 'string'
-          ? data.error.message
-          : 'AI Gateway returned HTTP ' + upstream.status + '.';
-        const privacyError = /no.?training|prompt.?training|training.*provider|provider.*available|no_providers_available/i.test(message);
+        const message = data && typeof data.error === 'string'
+          ? data.error
+          : data && data.error && typeof data.error.message === 'string'
+            ? data.error.message
+            : 'AI Gateway returned HTTP ' + upstream.status + '.';
+        const errorType = data && (data.type || data.code || (data.error && data.error.type));
+        const privacyError = errorType === 'no_providers_available'
+          || /no.?training|prompt.?training|training.*provider|provider.*available|no_providers_available/i.test(message);
         return json(res, upstream.status, {
           error: message.slice(0, 500),
           code: privacyError ? 'NO_TRAINING_UNAVAILABLE' : 'AI_GATEWAY_ERROR'
