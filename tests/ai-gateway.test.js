@@ -37,7 +37,7 @@ test('AI Gateway proxy requires a same-origin, authenticated WALLET OS session',
   }
 });
 
-test('AI Gateway proxy calls the selected model with ZDR and returns the model response', async () => {
+test('AI Gateway proxy blocks prompt training and returns the model response', async () => {
   const originalFetch = global.fetch;
   const requests = [];
   global.fetch = async (url, options = {}) => {
@@ -73,7 +73,7 @@ test('AI Gateway proxy calls the selected model with ZDR and returns the model r
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.reply, 'WALLET OS connection OK');
     assert.equal(res.body.model, 'google/gemini-3.1-flash-lite');
-    assert.equal(res.body.privacyMode, 'zdr-required');
+    assert.equal(res.body.privacyMode, 'no-prompt-training');
     assert.match(res.body.routingEvidence, /ZDR requested/);
 
     const authCall = requests.find(x => x.url.endsWith('/auth/v1/user'));
@@ -84,8 +84,8 @@ test('AI Gateway proxy calls the selected model with ZDR and returns the model r
     assert.equal(modelCall.options.headers.Authorization, 'Bearer test-vercel-oidc-token');
     const payload = JSON.parse(modelCall.options.body);
     assert.equal(payload.model, 'google/gemini-3.1-flash-lite');
-    assert.equal(payload.providerOptions.gateway.zeroDataRetention, true);
     assert.equal(payload.providerOptions.gateway.disallowPromptTraining, true);
+    assert.equal(payload.providerOptions.gateway.zeroDataRetention, undefined);
     assert.equal(payload.stream, false);
     assert.equal(payload.messages[0].content, 'Reply with exactly: WALLET OS connection OK');
   } finally {
