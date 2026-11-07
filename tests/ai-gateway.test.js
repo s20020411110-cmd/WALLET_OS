@@ -143,11 +143,13 @@ test('AI Gateway health check verifies the OIDC model endpoint without generatin
   };
   try {
     const res = makeResponse();
-    await aiHandler(makeRequest({
+    const req = makeRequest({
       method: 'GET',
       body: {},
       headers: { 'x-vercel-oidc-token': 'test-vercel-oidc-token' }
-    }), res);
+    });
+    req.url = '/api/ai?health=1';
+    await aiHandler(req, res);
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.ok, true);
     assert.equal(res.body.gateway, 'reachable');
