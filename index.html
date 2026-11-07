@@ -664,8 +664,9 @@ async function live(man){
    const next={...S.rates};
    ['USD','SAR','AED','YER'].forEach(c=>{if(!S.man[c])next[c]=usd/mid[c]});
    next.USD=1;S.rates=next;S.fxLocalRates=raw;
-   S.fxMeta={source:'exrye.com/aden',fetchedAt:f.fetchedAt||new Date().toISOString(),sourceUpdatedLabel:f.sourceUpdatedLabel||'غير محدد',day:today,conversion:'midpoint of buy/sell'};
-   LV.fx=Date.now();LV.fxOK=1;ch=1;
+   const sourceUpdatedLabel=String(f.sourceUpdatedLabel||'').trim(),sourceIsToday=/^(اليوم|today)$/i.test(sourceUpdatedLabel)||sourceUpdatedLabel===today;
+   S.fxMeta={source:'exrye.com/aden',fetchedAt:f.fetchedAt||new Date().toISOString(),sourceUpdatedLabel:sourceUpdatedLabel||'غير محدد',day:sourceIsToday?today:'',conversion:'midpoint of buy/sell'};
+   LV.fx=Date.now();LV.fxOK=sourceIsToday?1:0;ch=1;
   }catch(e){LV.fxOK=0}
  }
  if(ch){
@@ -683,7 +684,7 @@ PG.activity=()=>{const m={all:Object.keys(TL),inc:['inc'],exp:['exp'],trf:['trf'
 PG.exchange=()=>{
  const sel=k=>`<select onchange="EX.${k}=this.value;build()">${XO.map(o=>`<option value=${o} ${EX[k]==o?'selected':''}>${xl(o)}</option>`).join('')}</select>`;
  const g=S.gold,precise=(v,c)=>{const n=Number(v).toLocaleString(LOC(),{minimumFractionDigits:2,maximumFractionDigits:2});return c==='USD'?'$'+n:n+' '+SYM[c]},updated=g.t?new Date(g.t).toLocaleString(LOC()):'—';
- const fxUpdated=S.fxMeta&&S.fxMeta.fetchedAt?new Date(S.fxMeta.fetchedAt).toLocaleString(LOC()):_('لم يتم التحديث بعد|Not updated yet');
+ const fxUpdated=S.fxMeta&&S.fxMeta.fetchedAt?new Date(S.fxMeta.fetchedAt).toLocaleString(LOC()):_('لم يتم التحديث بعد|Not updated yet'),fxSourceDay=S.fxMeta&&S.fxMeta.sourceUpdatedLabel||_('غير معروف|Unknown');
  const goldSource=({xaus:'XAUS','gold-api':'Gold API',snap:_('لقطة محفوظة|Saved snapshot'),manual:_('يدوي|Manual')})[g.src]||g.src||'—';
  const names={USD:'الدولار الأمريكي|US dollar',SAR:'الريال السعودي|Saudi riyal',AED:'الدرهم الإماراتي|UAE dirham',BHD:'الدينار البحريني|Bahraini dinar',EUR:'اليورو|Euro',KWD:'الدينار الكويتي|Kuwaiti dinar',OMR:'الريال العماني|Omani rial',YER:'الريال اليمني|Yemeni rial'};
  const order=['USD','SAR','AED','BHD','EUR','KWD','OMR','YER'];
@@ -701,7 +702,7 @@ PG.exchange=()=>{
  </div>
  <div class=cd>
   <h4>${_('أسعار الصرف في عدن|Aden exchange rates')}</h4>
-  <p class=bc>${_('المصدر|Source')}: <a href='https://exrye.com/aden' target=_blank rel=noopener>exrye.com/aden</a> · ${_('تاريخ جلب البيانات|Fetched at')}: ${fxUpdated}</p>
+  <p class=bc>${_('المصدر|Source')}: <a href='https://exrye.com/aden' target=_blank rel=noopener>exrye.com/aden</a> · ${_('وقت الجلب|Fetched at')}: ${fxUpdated} · ${_('آخر تحديث لدى المصدر|Source last updated')}: ${fxSourceDay}</p>
   <div class=sc><table><thead><tr><th>${_('العملة|Currency')}</th><th>${_('شراء|Buy')}</th><th>${_('بيع|Sell')}</th></tr></thead><tbody>${localRows||`<tr><td colspan=3>${_('سيظهر جدول عدن بعد أول تحديث ناجح|Aden rates appear after the first successful refresh')}</td></tr>`}</tbody></table></div>
   <p class=bc>${_('يستخدم التطبيق متوسط سعري الشراء والبيع للتحويلات التقديرية، مع الاحتفاظ بالسعرين الأصليين للعرض. يُحدّث جدول الصرف مرة يومياً حسب تاريخ عدن، بينما يتحدّث الذهب دورياً.|The app uses the midpoint of buy/sell for indicative conversions while retaining both source prices for display. FX refreshes once per Aden calendar day; gold refreshes periodically.')}</p>
   <button class=bt data-a=lv>${_('تحديث الأسعار الآن|Refresh prices now')}</button>
