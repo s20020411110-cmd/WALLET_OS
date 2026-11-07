@@ -128,9 +128,14 @@ The current main-branch browser app is connected to this project using the pinne
 - Market quote persistence/ingestion for the FX and gold quote tables is not yet wired to the existing client-side market feeds.
 
 ### Deployment status
-- The source changes are committed to GitHub main.
-- A Vercel project for this repository was not previously linked; deployment must be verified separately before considering the new sign-in flow live at the production URL.
+- The repository is linked to the separate Vercel project `wallet-os` (team `s20020411110-8096`).
+- Deployment `dpl_2F2cVSzms6qDN6Zyntbe3VUT97Xm` built successfully and is `READY` for commit `1b7c654735ca5909033142abb50ecc52625afcd0`.
+- Vercel SSO deployment protection is enabled; direct preview-page fetching was not independently verified with the current connector credentials.
 
-## Not yet connected to the browser app
+## Remaining integration work
 
-The current index.html still stores its data in localStorage and has a local-only sign-in mechanism. The database does not automatically sync with those local records yet. The next implementation phase must add Supabase Auth and a deliberate local-data import/reconciliation flow before treating WALLET OS as a persistent multi-user app.
+- Verify an actual user sign-up/sign-in through the deployed URL, including the configured email-confirmation behavior.
+- Verify a representative local-data import against a real user account and reconcile opening balances before removing or archiving the device copy.
+- Build audited update/archive RPCs for cloud entity metadata and a correction/reversal workflow for posted transactions.
+- Add trusted server-side ingestion for the exchange-rate and gold-quote tables; the app currently continues to fetch/retain market quotes through its existing browser/API path.
+- Validate the production project's access-protection and domain settings with the intended users.
