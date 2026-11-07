@@ -141,11 +141,14 @@ Add that same origin (and any custom production domain later adopted) to the all
 - Repository: `s20020411110-cmd/WALLET_OS`, branch `main`; linked to the separate Vercel project `wallet-os`.
 - Stable production URL: https://wallet-os-s20020411110-8096.vercel.app
 - Production deploys are served without Vercel SSO; preview deployments remain SSO-protected.
-- Each push to `main` starts an automatic production build. Verify the latest build and GitHub Actions run after changes.
+- Latest verified deployment: `dpl_GTS21DN7yacFL7snDVdFf9HSEMoK`, state `READY`, source commit `7858b5a065a14db1e057bf175582deb94ae7ae8c`.
+- The stable production URL returned HTTP 200 and served the Supabase SDK, publishable-key client, cloud CRUD RPC calls, financial posting RPC, and gold subtype mapping.
+- GitHub Actions run `42388516240` completed successfully for the source and cloud integration tests.
 
 ## Remaining integration work
 
-- Verify an actual user sign-up/sign-in through the deployed URL, including the configured email-confirmation behavior.
+- In Supabase Dashboard → Authentication → URL Configuration, set Site URL to `https://wallet-os-s20020411110-8096.vercel.app` and add this origin to allowed Redirect URLs. The Auth configuration cannot be updated by the currently connected Supabase tools.
+- Verify an actual user sign-up/sign-in through the deployed URL after the redirect allowlist is configured, including email-confirmation behavior.
 - Verify a representative local-data import against a real user account and reconcile opening balances before removing or archiving the device copy.
 - Build audited update/archive RPCs for cloud entity metadata and a correction/reversal workflow for posted transactions.
 - Add trusted server-side ingestion for the exchange-rate and gold-quote tables; the app currently continues to fetch/retain market quotes through its existing browser/API path.
