@@ -125,5 +125,5 @@ test('gold hero card follows the active theme and remains compact', () => {
   assert.match(html, /--gold-hero-color/);
   assert.match(html, /const AI_GATEWAY_MODEL='google\/gemini-3\.1-flash-lite'/);
   assert.match(html, /provider:'vercel',model:AI_GATEWAY_MODEL/);
-  assert.match(html, /zeroDataRetention/);
+  assert.match(html, /Vercel AI Gateway/);
 });
