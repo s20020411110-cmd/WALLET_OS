@@ -78,11 +78,11 @@ jobs:
           {
             echo "## WALLET OS Android APK"
             echo ""
-            echo "- Package: `com.walletos.finance`"
+            echo '- Package: `com.walletos.finance`'
             echo "- Build: debug (installable for testing)"
             echo "- SHA-256:"
             echo ""
-            echo "```"
+            echo '```'
             cat apk-sha256.txt
             echo "```"
           } >> "$GITHUB_STEP_SUMMARY"
