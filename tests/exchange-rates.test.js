@@ -208,7 +208,7 @@ test('offline sync retries a lost response with the same idempotency key', async
     }
     return { data: name === 'create_wallet_account' ? 'remote-wallet-id' : 'remote-transaction-id', error: null };
   });
-  const { sandbox, api, calls } = harness;
+  const { navigator, api, calls } = harness;
   api.cloudQueueRpc('create_wallet_account', {
     p_name: 'Cash', p_kind: 'cash', p_currency_code: 'SAR', p_request_key: 'stable-wallet-key'
   });
@@ -217,7 +217,7 @@ test('offline sync retries a lost response with the same idempotency key', async
     p_account_id: 'local-offline-id', p_idempotency_key: 'stable-transaction-key',
     p_category_id: 'category-id', p_occurred_on: '2026-11-07'
   });
-  sandbox.navigator.onLine = true;
+  navigator.onLine = true;
   assert.equal(await api.cloudSyncPending(true, false), false);
   assert.equal(api.isOffline(), true);
   assert.equal(api.cloudQueueLoad().length, 2);
