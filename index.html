@@ -495,7 +495,7 @@ const goldTrendChart=(g)=>{
  const ranges=[12,30,60].map(n=>'<button type="button" class="'+(GOLD_RANGE===n?'active':'')+'" data-a="goldRange" data-v="'+n+'" aria-pressed="'+(GOLD_RANGE===n?'true':'false')+'">'+n+' '+_('قراءة|readings')+'</button>').join('');
  return '<div class="gold-trend" style="--gold-trend:'+color+'">'+
   '<div class="gold-trend-head"><span class="gold-trend-status"><i>'+icon+'</i>'+title+'</span><div class="gold-trend-change">'+(metrics.count>1?sign+metrics.percent.toFixed(2)+'%':'—')+'</div></div>'+
-  '<div class="gold-trend-stats"><b>'+(metrics.count>1?sign+fm(metrics.delta,'USD'):'—')+'</b><small>'+_('التغير بين أول وآخر قراءة · دولار/أونصة|Change from first to latest reading · USD/oz')+'</small></div>'+
+  '<div class="gold-trend-stats"><b>'+(metrics.count>1?(metrics.delta>0?'+':metrics.delta<0?'−':'')+fm(Math.abs(metrics.delta),'USD'):'—')+'</b><small>'+_('التغير بين أول وآخر قراءة · دولار/أونصة|Change from first to latest reading · USD/oz')+'</small></div>'+
   '<div class="gold-trend-range">'+ranges+'</div>'+
   '<svg class="gold-trend-chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+_('الرسم البياني لاتجاه الذهب مقابل الدولار|Gold price trend against the US dollar')+'">'+
    '<defs><linearGradient id="'+gradient+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+color+'" stop-opacity=".24"/><stop offset="100%" stop-color="'+color+'" stop-opacity=".015"/></linearGradient></defs>'+
