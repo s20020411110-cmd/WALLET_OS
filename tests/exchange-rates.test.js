@@ -267,11 +267,11 @@ test('gold trend chart changes to green or red and exposes selectable ranges and
   const falling = goldTrendChart({ history: [{ usd: 4072 }, { usd: 4050 }], usd: 4050, src: 'xaus' });
   const single = goldTrendChart({ history: [{ usd: 4072 }], usd: 4072, src: 'xaus' });
   assert.ok(rising.includes('--gold-trend:#16a34a'));
-  assert.ok(rising.includes('اتجاه صاعد'));
+  assert.ok(rising.includes('Upward trend'));
   assert.ok(rising.includes('data-a="goldRange"'));
   assert.ok(rising.includes('data-a="goldPoint"'));
   assert.ok(falling.includes('--gold-trend:#dc2626'));
-  assert.ok(falling.includes('اتجاه هابط'));
+  assert.ok(falling.includes('Downward trend'));
   assert.ok(single.includes('Trend not established yet'));
   assert.ok(single.includes('At least two observations'));
 });
