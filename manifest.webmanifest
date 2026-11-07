@@ -1,0 +1,20 @@
+{
+  "name": "WALLET OS",
+  "short_name": "WALLET OS",
+  "description": "Personal finance manager with offline-first storage and cloud sync.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#102a28",
+  "theme_color": "#102a28",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
