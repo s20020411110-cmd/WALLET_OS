@@ -137,3 +137,8 @@ The Gold investment page separates two data views:
 - The gold price card and the market chart use XAUS `/api/v1/chart?symbol=xau&range=3mo&interval=1d` daily XAU/USD OHLC candles. Each candle is one trading day (open, high, low, close). The current spot quote shown in the price card remains a separate live quote; the card's daily change compares it with the previous daily close. The daily history is refreshed at most every six hours and stored locally; no intraday polling samples are converted into fake daily candles.
 - The lower portfolio chart is a current P/L breakdown by recorded gold asset. Each row sums realized P/L from sales and unrealized P/L from the remaining holding at the latest spot quote, converted into the app's base currency. It is a current snapshot, not a fabricated daily historical portfolio curve. Existing opening quantities/costs have no original acquisition date, so the app does not backfill a time series for them.
 - If daily OHLC data is unavailable, the chart shows an explicit empty state rather than synthesizing open/high/low prices. Historical candles and the current spot quote are intentionally kept separate.
+
+
+## Investment capital and portfolio P/L chart
+
+The upper chart on the Gold / Investments page is a portfolio chart, not a global XAU/USD market chart. It compares, per investment asset, the remaining invested cost basis with the current holding value and displays total realized plus unrealized profit/loss. Amounts are converted to the user's base currency. The live global gold spot quote remains separate in the gold price card above. Regression coverage: `tests/investment-capital-chart.test.js`.
