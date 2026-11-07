@@ -65,3 +65,14 @@ test('cloud financial writes use the secure posting RPC and preserve a local imp
   assert.match(html, /CLOUD_IMPORT_STATUS='partial'/);
   assert.match(html, /wallet_account_balances/);
 });
+
+test('cloud import is multi-device safe and password recovery is wired', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /function cloudImportSourceId\(/);
+  assert.match(html, /function cloudImportKey\(/);
+  assert.match(html, /S\.cloudOwnerId=uid/);
+  assert.match(html, /cloudImportSavedBackup/);
+  assert.match(html, /cloudShowPasswordRecovery/);
+  assert.match(html, /PASSWORD_RECOVERY/);
+  assert.match(html, /auth\.updateUser\(\{password:/);
+});
