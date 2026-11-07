@@ -106,6 +106,15 @@ The current main-branch browser app is connected to this project using the pinne
 - A local-only guest mode remains available, but it does not synchronize to Supabase.
 - The former local password-hash login is no longer used to authenticate cloud accounts.
 
+
+### Supabase Auth URL configuration
+
+In Supabase Dashboard → Authentication → URL Configuration, set the Site URL to:
+
+`https://wallet-os-s20020411110-8096.vercel.app`
+
+Add that same origin (and any custom production domain later adopted) to the allowed Redirect URLs. The app sets email-confirmation and password-reset redirects to the current application origin. This setting cannot be changed through the connected Supabase database tools used for this implementation, so verify it in the dashboard before relying on email confirmation/reset links.
+
 ### Cloud data mapping
 - Accounts are loaded from `wallet_account_balances`; balances are derived from journal lines.
 - Activity, savings goals, loans, investment positions/trades, categories and budgets are loaded from the authenticated user's rows.
@@ -129,8 +138,9 @@ The current main-branch browser app is connected to this project using the pinne
 
 ### Deployment status
 - The repository is linked to the separate Vercel project `wallet-os` (team `s20020411110-8096`).
-- Deployment `dpl_2F2cVSzms6qDN6Zyntbe3VUT97Xm` built successfully and is `READY` for commit `1b7c654735ca5909033142abb50ecc52625afcd0`.
-- Vercel SSO deployment protection is enabled; direct preview-page fetching was not independently verified with the current connector credentials.
+- Latest production deployment `dpl_36hP8Hw5U1MfgmhLzCXgViMeHc9L` is `READY` for commit `a1723019e4c9ae0ef49f9867f7792765df31ee0c`; the latest code update is redeploying automatically after each main-branch push.
+- Production deployment URLs are public; SSO protection remains enabled for preview deployments.
+- Project URL: https://wallet-os-s20020411110-8096.vercel.app
 
 ## Remaining integration work
 
