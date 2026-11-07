@@ -402,6 +402,36 @@ button,input,select,textarea{font:inherit}
 .gold-trend-selected small{color:var(--mut);font-size:10px}
 .gold-trend-note{font-size:10px;line-height:1.6;color:var(--mut)}
 @media(prefers-reduced-motion:reduce){.gold-trend-line,.gold-trend-current{animation:none!important}.gold-trend-range button,.gold-trend-point{transition:none}}
+
+.gold-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:142px;padding:20px 22px!important;border:1px solid rgba(255,255,255,.08)!important;border-radius:23px!important;background:linear-gradient(115deg,#030405 0%,#080d0c 72%,#050607 100%)!important;color:#f7f8f7!important;overflow:hidden;position:relative}
+.gold-hero::before{content:"";position:absolute;width:220px;height:160px;inset-inline-start:28%;top:-90px;background:radial-gradient(ellipse,rgba(22,163,74,.12),transparent 70%);pointer-events:none}
+.gold-hero-copy{min-width:0;flex:1;display:grid;gap:7px;position:relative;z-index:1;direction:rtl;text-align:right}
+.gold-hero-eyebrow{display:flex;align-items:center;gap:8px;color:#d5d9d7;font-size:12px;font-weight:600;letter-spacing:.15px}
+.gold-hero-eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--gold-hero-color);box-shadow:0 0 0 4px color-mix(in srgb,var(--gold-hero-color) 18%,transparent);flex:none}
+.gold-hero-price-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gold-hero-price{font-size:clamp(29px,5vw,38px);font-weight:650;line-height:1.12;letter-spacing:-1.5px;color:#fff;font-variant-numeric:tabular-nums;direction:ltr;white-space:nowrap}
+.gold-hero-change{display:inline-flex;align-items:center;gap:4px;border-radius:99px;padding:3px 8px;font-size:12px;font-weight:700;direction:ltr;white-space:nowrap;font-variant-numeric:tabular-nums}
+.gold-hero-change.up{background:rgba(22,163,74,.15);color:#34d399}
+.gold-hero-change.down{background:rgba(220,38,38,.16);color:#fb7185}
+.gold-hero-change.flat{background:rgba(161,161,170,.13);color:#c4c4cc}
+.gold-hero-foot{display:flex;align-items:center;gap:5px 10px;flex-wrap:wrap;color:#9ca3a1;font-size:10px;line-height:1.5}
+.gold-hero-trend-note{color:#747d78;font-size:9px;line-height:1.4}
+.gold-hero-chart{width:160px;max-width:36%;height:auto;flex:none;overflow:visible;direction:ltr;position:relative;z-index:1}
+.gold-hero-bar{transform-box:fill-box;transform-origin:center bottom;animation:goldHeroBarIn .65s cubic-bezier(.2,.8,.2,1) both}
+@keyframes goldHeroBarIn{from{transform:scaleY(.05);opacity:.2}to{transform:scaleY(1);opacity:1}}
+.gold-hero-point{animation:goldHeroPoint 1.8s ease-out infinite}
+@keyframes goldHeroPoint{0%{opacity:.9}70%,100%{opacity:0;r:11}}
+.gold-hero-wait{width:160px;max-width:36%;min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#a1a1aa;text-align:center;position:relative;z-index:1}
+.gold-hero-wait span{font-size:30px;line-height:1}
+.gold-hero-wait small{font-size:9px;line-height:1.4}
+.gold-karat-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.gold-karat-cell{display:grid;gap:3px;min-width:0;padding:11px 13px;border:1px solid var(--ln);border-radius:15px;background:var(--c)}
+.gold-karat-cell small{font-size:10px;color:var(--mut)}
+.gold-karat-cell b{font-size:14px;font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(max-width:480px){.gold-hero{padding:17px 15px!important;gap:8px}.gold-hero-price{font-size:28px;letter-spacing:-1px}.gold-hero-chart,.gold-hero-wait{width:112px;max-width:32%}.gold-hero-foot{font-size:9px}.gold-karat-strip{gap:6px}.gold-karat-cell{padding:9px 8px;border-radius:12px}.gold-karat-cell b{font-size:11px}}
+@media(max-width:350px){.gold-hero{gap:4px}.gold-hero-price-line{gap:6px}.gold-hero-price{font-size:25px}.gold-hero-chart,.gold-hero-wait{width:94px}.gold-hero-change{font-size:10px;padding:2px 6px}.gold-karat-cell b{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.gold-hero-bar,.gold-hero-point{animation:none!important}}
+
 </style><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#102a28"></head><body><div id="app"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script>
@@ -507,6 +537,56 @@ const goldTrendChart=(g)=>{
  '</div>';
 };
 
+
+const goldHeroCard=(g)=>{
+ const stored=Array.isArray(g.history)&&g.history.length
+  ?g.history
+  :(g.h||[]).map(usd=>({usd:Number(usd),observedAt:null,source:'legacy'}));
+ const limit=Math.max(2,Number(GOLD_RANGE)||12);
+ const observations=stored.filter(p=>Number(p&&p.usd)>0).slice(-60);
+ const last=observations[observations.length-1];
+ if(Number(g.usd)>0&&(!last||Number(last.usd)!==Number(g.usd))){
+  observations.push({usd:Number(g.usd),observedAt:g.t||null,source:g.src||'snapshot'});
+ }
+ const points=observations.slice(-limit);
+ const metrics=goldTrendMetrics(points),direction=metrics.direction;
+ const color=direction>0?'#16a34a':direction<0?'#dc2626':'#a1a1aa';
+ const state=direction>0?'up':direction<0?'down':'flat';
+ const arrow=direction>0?'↗':direction<0?'↘':'→';
+ const price=v=>'$'+new Intl.NumberFormat(LOC(),{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(v)||0);
+ const change=metrics.count>1?(metrics.percent>0?'+':'')+metrics.percent.toFixed(2)+'%':'—';
+ const source=({xaus:'XAUS','gold-api':'Gold API',snap:_('لقطة محفوظة|Saved snapshot'),manual:_('يدوي|Manual'),live:_('مباشر|Live')})[g.src]||g.src||_('غير معروف|Unknown');
+ const date=g.t&&Number.isFinite(new Date(g.t).getTime())
+  ?new Date(g.t).toLocaleString(LOC(),{dateStyle:'medium',timeStyle:'short'})
+  :_('وقت التحديث غير متاح|Update time unavailable');
+ const visual=points.slice(-14);
+ let chart;
+ if(visual.length>1){
+  const values=visual.map(p=>Number(p.usd)),min=Math.min(...values),max=Math.max(...values),range=max-min||Math.max(max*.001,1);
+  const W=160,base=59,step=W/visual.length;
+  const bars=values.map((v,i)=>{
+   const norm=(v-min)/range,height=11+norm*31,x=i*step+step*.25,w=Math.max(3,step*.5),y=base-height;
+   return '<g class="gold-hero-bar" style="animation-delay:'+i*38+'ms"><line x1="'+(x+w/2)+'" x2="'+(x+w/2)+'" y1="'+Math.max(5,y-6)+'" y2="'+(base+2)+'" stroke="'+color+'" stroke-width="2" stroke-linecap="round" opacity=".5"/><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+height+'" rx="'+Math.min(3,w/2)+'" fill="'+color+'" opacity="'+(.48+i/values.length*.48)+'"/></g>';
+  }).join('');
+  const lastX=(values.length-.5)*step,lastH=11+(values[values.length-1]-min)/range*31,lastY=base-lastH;
+  chart='<svg class="gold-hero-chart" viewBox="0 0 160 72" role="img" aria-label="'+_('رسم مصغر للقراءات المحفوظة|Mini chart of saved gold readings')+'">'+bars+'<circle class="gold-hero-point" cx="'+lastX+'" cy="'+(lastY-2)+'" r="4" fill="'+color+'"/></svg>';
+ }else{
+  chart='<div class="gold-hero-wait"><span>·</span><small>'+_('بانتظار قراءة ثانية لإظهار الاتجاه|Waiting for a second reading to show direction')+'</small></div>';
+ }
+ const trendNote=metrics.count>1
+  ?_('التغير بين أول وآخر قراءة محفوظة|Change between first and latest saved reading')
+  :_('لا توجد قراءات كافية لحساب التغير|Not enough readings to calculate movement');
+ return '<div class="cd gold-hero" style="--gold-hero-color:'+color+'">'+
+  '<div class="gold-hero-copy">'+
+   '<div class="gold-hero-eyebrow"><i></i><span>'+_('سعر الذهب الفوري|Gold Spot')+' · XAU/USD</span></div>'+
+   '<div class="gold-hero-price-line"><bdi class="gold-hero-price">'+price(g.usd)+'</bdi><span class="gold-hero-change '+state+'">'+arrow+' '+change+'</span></div>'+
+   '<div class="gold-hero-foot"><span>'+_('دولار / أونصة ترويسية|USD / troy ounce')+'</span><span>'+source+' · '+date+'</span></div>'+
+   '<small class="gold-hero-trend-note">'+trendNote+'</small>'+
+  '</div>'+chart+
+ '</div>';
+};
+const goldKaratStrip=g=>'<div class="gold-karat-strip">'+[24,22,21,18].map(k=>'<div class="gold-karat-cell"><small>'+k+'K / '+_('جرام|g')+'</small><b>'+fm(cv(gUSDg()*PUR[k],'USD',S.base))+'</b></div>').join('')+'</div>';
+
 const kc=(l,v,ch,sp,col,cls='',u='')=>`<div class="cd kc ${cls}"><small>${_(l)}</small><b class=n data-n="${v}" data-u="${u}">${u=='#'?v:u?v.toFixed(1)+u:fm(v)}</b><div class=ft>${ch||'<span></span>'}</div></div>`;
 const bars=(a,col,h=150,pc)=>{const m=Math.max(1,...a.map(Math.abs)),bw=30,w=bw-12,cur=S.year==TY?CM:a.length-1;return `<svg viewBox="0 0 360 ${h+16}" class=ch><defs><pattern id=ht width=6 height=6 patternUnits=userSpaceOnUse patternTransform=rotate(45)><line x1=0 y1=0 x2=0 y2=6 stroke="var(--ink)" stroke-width=2.2 opacity=.32 /></pattern></defs>${a.map((v,i)=>{const bh=Math.max(w,Math.abs(v)/m*h),x=i*bw+6,t=pc?v.toFixed(0)+'%':cf(v),on=i==cur;return `<g class="mh${on?' on':''}" data-a=hbs data-v=${i}><rect x=${x-2} y=0 width=${w+4} height=${h} fill=transparent /><rect class="gr vb2" x=${x} y=${h-bh} width=${w} height=${bh} rx=${w/2} fill="${!v?'transparent':on?'var(--ink)':'url(#ht)'}" stroke="var(--ink)" stroke-opacity=${on?0:.25} style="animation-delay:${i*45}ms"/>${pill(x+w/2,Math.max(12,h-bh-14),t,'var(--ink)','var(--bg)',360)}<text x=${x+w/2} y=${h+12} text-anchor=middle>${i+1}</text></g>`}).join('')}</svg>`};
 const line=(a,col,a2,col2)=>{const all=[...a,...(a2||[]),0],mn=Math.min(...all),mx=Math.max(...all),PL=30,yy=v=>16+(mx-v)/((mx-mn)||1)*104,xx=i=>PL+i/(a.length-1||1)*(350-PL),z=yy(0),id='g'+(seq++),P=q=>q.map((v,i)=>[xx(i),yy(v)]);return `<svg viewBox="0 0 360 150" class=ch><defs><linearGradient id=${id} x1=0 x2=0 y1=0 y2=1><stop offset=0 stop-color="${col}" stop-opacity=.14 /><stop offset=1 stop-color="${col}" stop-opacity=0 /></linearGradient></defs>${[0,1,2].map(g=>{const v=mn+(mx-mn)*g/2;return `<line x1=${PL} x2=355 y1=${yy(v)} y2=${yy(v)} stroke="var(--ln)" stroke-dasharray="2 5"/><text x=${PL-5} y=${yy(v)+3} text-anchor=end>${cf(v)}</text>`}).join('')}<path d="${sm(P(a))} L${xx(a.length-1)},${z} L${xx(0)},${z}Z" fill="url(#${id})"/><path class=dr pathLength=1 d="${sm(P(a))}" fill=none stroke="${col}" stroke-width=3 stroke-linecap=round />${a2?`<path d="${sm(P(a2))}" fill=none stroke="${col2}" stroke-width=2 stroke-dasharray="3 3"/>`:''}${a.map((v,i)=>`<g class=mh><rect x=${xx(i)-10} y=0 width=20 height=150 fill=transparent /><g class=sh><line x1=${xx(i)} x2=${xx(i)} y1=10 y2=130 stroke="var(--ink)" stroke-dasharray="3 3" opacity=.4 /><circle cx=${xx(i)} cy=${yy(v)} r=5 fill="${col}" stroke="#fff" stroke-width=2 /></g>${pill(xx(i),yy(v)-18,cf(v),'var(--ink)','var(--c)',360)}<text x=${xx(i)} y=147 text-anchor=middle>${i+1}</text></g>`).join('')}</svg>`};
@@ -576,7 +656,7 @@ const card=g=>{const t=cv(g.target,g.cur),s=sv(g),p=s/t*100,left=Math.max(0,t-s)
 return hd('بناء الثروة والأهداف|Wealth & goals','املأ أهدافك دائرة بعد دائرة|Fill your goals, one ring at a time',addb('goal','هدف جديد|New goal'))+`<div class="g k">${kc('إجمالي المدخرات|Total saved',savT(),'',gr,'var(--gd)')}${kc('مدخرات الشهر|This month',m[c],'',m,'var(--gd)')}${kc('نسبة الادخار|Saving rate',I[c]?m[c]/I[c]*100:0,'',null,'#a0a4ad','','%')}</div>
 <div class="g c2"><div class=cd><h4>Savings Growth</h4>${line(gr.slice(0,c+1),'var(--gd)')}</div><div class=cd><h4>Monthly Savings</h4>${bars(m,'var(--gd)')}</div></div><div class="g c2">${S.goals.map(card).join('')||`<p class=em>${_('أنشئ هدفك الأول|Create your first goal')}</p>`}</div>`};
 PG.invest=()=>{const A=S.inv.map(a=>({a,p:pos(a)})),v=invV(),c=invC(),pl=v-c,gr=Z(A.map(z=>z.p.q*(PUR[z.a.karat||24]||.999))),best=A.filter(z=>z.p.c>0).sort((x,y)=>(y.p.v/y.p.c)-(x.p.v/x.p.c))[0],cap=Array.from({length:12},(_,i)=>upto('buy',i)-upto('sell',i)),cc=cm(),by=GT.map((s,i)=>({l:_(s),v:Z(A.filter(z=>(z.a.type||0)==i).map(z=>cv(z.p.v,z.a.cur))),c:PAL[i]})).filter(z=>z.v>0),g=S.gold,h=g.h||[];
-return hd('الذهب — ذكاء الاستثمار|Gold — investment intelligence','محفظتك من الذهب فقط، مسعّرة بالأونصة العالمية|A gold-only portfolio priced off the global ounce',addb('asset','إضافة ذهب|Add gold')+`<button class=bt data-a=lv>${_('تحديث الآن|Refresh')}</button><button class=bt data-a=gold>${_('سعر يدوي|Manual price')}</button>`)+`<div class="cd gp"><div><small>XAU/USD — ${_('الأونصة العالمية|Global spot / oz')}</small><b style="font-size:34px">${fm(g.usd,'USD')}</b><div class=bc>${({live:_('مباشر|Live'),snap:_('لقطة محفوظة|Saved snapshot'),manual:_('يدوي|Manual'),xaus:_('مصدر XAUS|XAUS feed'),'gold-api':_('Gold API|Gold API')})[g.src]||_('مصدر غير محدد|Unknown source')} · ${new Date(g.t).toLocaleString(LOC(),{dateStyle:'medium',timeStyle:'short'})}</div></div><div class=kar>${[24,22,21,18].map(k=>`<div><small>${k}K / ${_('جرام|g')}</small><b>${fm(cv(gUSDg()*PUR[k],'USD',S.base))}</b></div>`).join('')}</div>${spark(h,'var(--g2)')}${LV.ok?'':`<p class=bc style="flex-basis:100%">${_('الاتصال المباشر بمزوّد السعر غير متاح في هذه البيئة، فيُعرض آخر سعر محفوظ. شغّل الملف خارج claude.ai للتحديث اللحظي.|Live feed is unavailable in this environment, so the last saved price is shown. Run the file outside claude.ai for live updates.')}</p>`}</div><div class="cd market-card"><div class="market-title"><div><h4>${_('حركة سعر الذهب|Gold price movement')}</h4><small>${_('XAU / USD · الأونصة العالمية|XAU / USD · Global ounce')}</small></div><span class="market-live ${LV.ok?'is-live':''}"><i></i>${LV.ok?_('مباشر|Live'):_('محفوظ|Saved')}</span></div>${goldTrendChart(g)}</div>
+return hd('الذهب — ذكاء الاستثمار|Gold — investment intelligence','محفظتك من الذهب فقط، مسعّرة بالأونصة العالمية|A gold-only portfolio priced off the global ounce',addb('asset','إضافة ذهب|Add gold')+`<button class=bt data-a=lv>${_('تحديث الآن|Refresh')}</button><button class=bt data-a=gold>${_('سعر يدوي|Manual price')}</button>`)+`${goldHeroCard(g)}${goldKaratStrip(g)}<div class="cd market-card"><div class="market-title"><div><h4>${_('حركة سعر الذهب|Gold price movement')}</h4><small>${_('XAU / USD · الأونصة العالمية|XAU / USD · Global ounce')}</small></div><span class="market-live ${LV.ok?'is-live':''}"><i></i>${LV.ok?_('مباشر|Live'):_('محفوظ|Saved')}</span></div>${goldTrendChart(g)}</div>
 <div class="g k">${kc('قيمة المحفظة|Portfolio',v,'',null,'var(--g)')}${kc('الأرباح/الخسائر|P/L',pl,chip(c?pl/c*100:null),null,pl>=0?'var(--g)':'#c2453d')}${kc('ذهب صافٍ|Pure gold',gr,'',null,'var(--g)','',' g')}</div>
 <div class="g c2 q"><div class=cd><h4>Portfolio Performance</h4>${line(cap.slice(0,cc+1),'var(--g)',[...cap.slice(0,cc),v],'var(--ink)')}<p class=bc>${_('الخط المتصل: رأس المال المدفوع · المنقط: القيمة الحالية|Solid: capital paid · dashed: current value')}</p></div><div class=cd><h4>${_('توزيع الذهب|Allocation')}</h4>${donut(by)}</div></div>
 <div class=cd><div class=sc><table><thead><tr>${['الأصل|Asset','الجرامات|Grams','متوسط التكلفة/جم|Avg cost/g','السعر/جم|Price/g','القيمة|Value','ربح/خسارة|P/L',''].map(h=>`<th>${_(h)}</th>`).join('')}</tr></thead><tbody>${A.map(({a,p})=>`<tr><td>${a.n}<small>${_(GT[a.type||0]||GT[5])} · ${a.karat||24}K</small></td><td>${p.q.toFixed(2)}</td><td>${p.q?fm(p.c/p.q,a.cur):'—'}</td><td>${fm(gp(a),a.cur)}</td><td class=am>${fm(p.v,a.cur)}</td><td class=am style="color:${p.v-p.c>=0?'var(--gd)':'#c2453d'}">${fm(p.v-p.c,a.cur)}${p.pl?`<small>${_('محقق|Realized')} ${fm(p.pl,a.cur)}</small>`:''}</td><td><div class=cht><button class=ib data-a=ib data-v=${a.id}>＋</button><button class=ib data-a=is data-v=${a.id}>−</button><button class=ib data-a=di data-v=${a.id}>✕</button></div></td></tr>`).join('')||`<tr><td colspan=7 class=em>${_('لا ذهب مسجل|No gold yet')}</td></tr>`}</tbody></table></div></div>`};
