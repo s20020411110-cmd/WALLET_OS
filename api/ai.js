@@ -35,7 +35,7 @@ function getHeader(req, name) {
 function getVercelOidcToken(req) {
   const runtimeToken = typeof process !== 'undefined' && process.env
     ? process.env.VERCEL_OIDC_TOKEN : '';
-  return String(runtimeToken || getVercelOidcToken(req) || '').trim();
+  return String(runtimeToken || getHeader(req, 'x-vercel-oidc-token') || '').trim();
 }
 
 function readBody(req) {
