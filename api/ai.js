@@ -202,7 +202,8 @@ module.exports = async function handler(req, res) {
           max_tokens: 1200,
           providerOptions: {
             gateway: {
-              zeroDataRetention: true
+              zeroDataRetention: true,
+              disallowPromptTraining: true
             }
           }
         }),
