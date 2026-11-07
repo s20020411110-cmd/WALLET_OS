@@ -716,11 +716,27 @@ PG.savings=()=>{const m=mon('sav'),I=mon('inc'),c=cm(),gr=Array.from({length:12}
 const card=g=>{const t=cv(g.target,g.cur),s=sv(g),p=s/t*100,left=Math.max(0,t-s),eta=left&&r3>0?new Date(NOW.getFullYear(),NOW.getMonth()+Math.ceil(left/r3),1).toLocaleDateString(LOC(),{month:'short',year:'numeric'}):'—';return `<div class="cd ${g.stop?'off':''}"><div class=dn2>${ring(p,'var(--gd)')}<div style="flex:1"><b>${g.n}</b><div class=bc>${fm(s)} / ${fm(t)}</div><div class=bc>${_('المتبقي|Left')} ${fm(left)} · ${_('الوصول|ETA')} ${eta}</div><div class=bc>${_('معدل شهري|Monthly')} ${fm(r3)}</div></div></div><div class=goalp><i style="flex:${Math.max(1,Math.min(99,p))};background:var(--g)">${p.toFixed(0)}%</i><i style="flex:${100-Math.max(1,Math.min(99,p))}">${Math.max(0,100-p).toFixed(0)}%</i></div><div class=cht style="margin-top:8px"><button class="bt pr" data-a=gadd data-v=${g.id}>＋</button><button class=bt data-a=gwd data-v=${g.id}>−</button><button class=bt data-a=gst data-v=${g.id}>${g.stop?_('استئناف|Resume'):_('إيقاف|Pause')}</button><button class=bt data-a=eg data-v=${g.id}>✎</button><button class=bt data-a=dg data-v=${g.id}>${_('حذف|Delete')}</button></div>${(h=>h.length?`<details><summary class=bc>${_('السجل|History')}</summary>${h.map(x=>`<div class=row>${x.d}<b>${fm(x.a,x.c)}</b></div>`).join('')}</details>`:'')(S.tx.filter(x=>x.t=='sav'&&x.ref==g.id).sort((a,b)=>b.d.localeCompare(a.d)))}</div>`};
 return hd('بناء الثروة والأهداف|Wealth & goals','املأ أهدافك دائرة بعد دائرة|Fill your goals, one ring at a time',addb('goal','هدف جديد|New goal'))+`<div class="g k">${kc('إجمالي المدخرات|Total saved',savT(),'',gr,'var(--gd)')}${kc('مدخرات الشهر|This month',m[c],'',m,'var(--gd)')}${kc('نسبة الادخار|Saving rate',I[c]?m[c]/I[c]*100:0,'',null,'#a0a4ad','','%')}</div>
 <div class="g c2"><div class=cd><h4>Savings Growth</h4>${line(gr.slice(0,c+1),'var(--gd)')}</div><div class=cd><h4>Monthly Savings</h4>${bars(m,'var(--gd)')}</div></div><div class="g c2">${S.goals.map(card).join('')||`<p class=em>${_('أنشئ هدفك الأول|Create your first goal')}</p>`}</div>`};
-PG.invest=()=>{const A=S.inv.map(a=>({a,p:pos(a)})),v=invV(),c=invC(),pl=v-c,gr=Z(A.map(z=>z.p.q*(PUR[z.a.karat||24]||.999))),best=A.filter(z=>z.p.c>0).sort((x,y)=>(y.p.v/y.p.c)-(x.p.v/x.p.c))[0],cap=Array.from({length:12},(_,i)=>upto('buy',i)-upto('sell',i)),cc=cm(),by=GT.map((s,i)=>({l:_(s),v:Z(A.filter(z=>(z.a.type||0)==i).map(z=>cv(z.p.v,z.a.cur))),c:PAL[i]})).filter(z=>z.v>0),g=S.gold,h=g.h||[];
-return hd('الذهب — ذكاء الاستثمار|Gold — investment intelligence','محفظتك من الذهب فقط، مسعّرة بالأونصة العالمية|A gold-only portfolio priced off the global ounce',addb('asset','إضافة ذهب|Add gold')+`<button class=bt data-a=lv>${_('تحديث الآن|Refresh')}</button><button class=bt data-a=gold>${_('سعر يدوي|Manual price')}</button>`)+`${goldHeroCard(g)}${goldKaratStrip(g)}<div class="cd market-card"><div class="market-title"><div><h4>${_('حركة سعر الذهب|Gold price movement')}</h4><small>${_('XAU / USD · الأونصة العالمية|XAU / USD · Global ounce')}</small></div><span class="market-live ${LV.ok?'is-live':''}"><i></i>${LV.ok?_('مباشر|Live'):_('محفوظ|Saved')}</span></div>${goldTrendChart(g)}</div>
-<div class="g k">${kc('قيمة المحفظة|Portfolio',v,'',null,'var(--g)')}${kc('الأرباح/الخسائر|P/L',pl,chip(c?pl/c*100:null),null,pl>=0?'var(--g)':'#c2453d')}${kc('ذهب صافٍ|Pure gold',gr,'',null,'var(--g)','',' g')}</div>
-<div class="g c2 q"><div class=cd><h4>Portfolio Performance</h4>${line(cap.slice(0,cc+1),'var(--g)',[...cap.slice(0,cc),v],'var(--ink)')}<p class=bc>${_('الخط المتصل: رأس المال المدفوع · المنقط: القيمة الحالية|Solid: capital paid · dashed: current value')}</p></div><div class=cd><h4>${_('توزيع الذهب|Allocation')}</h4>${donut(by)}</div></div>
-<div class=cd><div class=sc><table><thead><tr>${['الأصل|Asset','الجرامات|Grams','متوسط التكلفة/جم|Avg cost/g','السعر/جم|Price/g','القيمة|Value','ربح/خسارة|P/L',''].map(h=>`<th>${_(h)}</th>`).join('')}</tr></thead><tbody>${A.map(({a,p})=>`<tr><td>${a.n}<small>${_(GT[a.type||0]||GT[5])} · ${a.karat||24}K</small></td><td>${p.q.toFixed(2)}</td><td>${p.q?fm(p.c/p.q,a.cur):'—'}</td><td>${fm(gp(a),a.cur)}</td><td class=am>${fm(p.v,a.cur)}</td><td class=am style="color:${p.v-p.c>=0?'var(--gd)':'#c2453d'}">${fm(p.v-p.c,a.cur)}${p.pl?`<small>${_('محقق|Realized')} ${fm(p.pl,a.cur)}</small>`:''}</td><td><div class=cht><button class=ib data-a=ib data-v=${a.id}>＋</button><button class=ib data-a=is data-v=${a.id}>−</button><button class=ib data-a=di data-v=${a.id}>✕</button></div></td></tr>`).join('')||`<tr><td colspan=7 class=em>${_('لا ذهب مسجل|No gold yet')}</td></tr>`}</tbody></table></div></div>`};
+PG.invest=()=>{
+ const A=S.inv.map(a=>({a,p:pos(a)})),v=invV(),gr=Z(A.map(z=>z.p.q*(PUR[z.a.karat||24]||.999))),plRows=portfolioPLRows(A),pl=Z(plRows.map(row=>row.total));
+ const grossCapital=Z(A.map(({a})=>{const buys=Z(S.tx.filter(r=>r.ref==a.id&&r.t=='buy').map(r=>cv(r.a,r.c,a.cur)));return cv((+a.c0||0)+buys,a.cur)}));
+ const roi=grossCapital?pl/grossCapital*100:null;
+ const by=GT.map((s,i)=>({l:_(s),v:Z(A.filter(z=>(z.a.type||0)==i).map(z=>cv(z.p.v,z.a.cur))),c:PAL[i]})).filter(z=>z.v>0),g=S.gold;
+ const controls=addb('asset','إضافة ذهب|Add gold')+'<button class=bt data-a=lv>'+_('تحديث الآن|Refresh')+'</button><button class=bt data-a=gold>'+_('سعر يدوي|Manual price')+'</button>';
+ const headers=['الأصل|Asset','الجرامات|Grams','متوسط التكلفة/جم|Avg cost/g','السعر/جم|Price/g','القيمة|Value','ربح/خسارة كلي|Total P/L',''].map(h=>'<th>'+_(h)+'</th>').join('');
+ const rows=A.map(({a,p})=>{
+  const unrealized=p.v-p.c,total=unrealized+p.pl;
+  return '<tr><td>'+a.n+'<small>'+_(GT[a.type||0]||GT[5])+' · '+(a.karat||24)+'K</small></td>'+
+   '<td>'+p.q.toFixed(2)+'</td><td>'+(p.q?fm(p.c/p.q,a.cur):'—')+'</td><td>'+fm(gp(a),a.cur)+'</td><td class=am>'+fm(p.v,a.cur)+'</td>'+
+   '<td class=am style="color:'+(total>=0?'#16a34a':'#dc2626')+'">'+fm(total,a.cur)+'<small>'+_('محقق|Realized')+' '+fm(p.pl,a.cur)+' · '+_('غير محقق|Unrealized')+' '+fm(unrealized,a.cur)+'</small></td>'+
+   '<td><div class=cht><button class=ib data-a=ib data-v='+a.id+'>＋</button><button class=ib data-a=is data-v='+a.id+'>−</button><button class=ib data-a=di data-v='+a.id+'>✕</button></div></td></tr>';
+ }).join('')||'<tr><td colspan=7 class=em>'+_('لا ذهب مسجل|No gold yet')+'</td></tr>';
+ return hd('الذهب — ذكاء الاستثمار|Gold — investment intelligence','محفظتك من الذهب فقط، مسعّرة بالأونصة العالمية|A gold-only portfolio priced off the global ounce',controls)+
+  goldHeroCard(g)+goldKaratStrip(g)+
+  '<div class="cd market-card"><div class="market-title"><div><h4>'+_('حركة الذهب في البورصة العالمية|Global gold market movement')+'</h4><small>'+_('XAU / USD · شموع يومية · 1D|XAU / USD · Daily candles · 1D')+'</small></div><span class="market-live '+(LV.ok?'is-live':'')+'"><i></i>'+(LV.ok?_('السعر الفوري متصل|Spot connected'):_('آخر سعر محفوظ|Last saved spot'))+'</span></div>'+goldTrendChart(g)+'</div>'+
+  '<div class="g k">'+kc('قيمة المحفظة|Portfolio value',v,'',null,'var(--g)')+kc('الأرباح/الخسائر|Total P/L',pl,chip(roi),null,pl>=0?'#16a34a':'#dc2626')+kc('ذهب صافٍ|Pure gold',gr,'',null,'var(--g)','',' g')+'</div>'+
+  '<div class="g c2 q"><div class=cd><h4>'+_('ربح وخسارة المحفظة حسب الأصل|Portfolio P/L by asset')+'</h4>'+portfolioPLChart(A)+'</div><div class=cd><h4>'+_('توزيع الذهب|Gold allocation')+'</h4>'+donut(by)+'</div></div>'+
+  '<div class=cd><div class=sc><table><thead><tr>'+headers+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+};
 PG.accounts=()=>`${hd('أموالك في كل مكان|All your money','النقد والبنوك والمحافظ في مكان واحد|Cash, banks and wallets together',addb('acc','حساب جديد|New account')+`<button class=bt data-a=add data-v=trf>⇄ ${_('تحويل|Transfer')}</button>`)}<div class="g c2"><div class=cd><h4>${_('التوزيع|Distribution')}</h4>${donut(S.accs.map((a,i)=>({l:a.n,v:Math.max(0,balB(a)),c:PAL[i+2]})))}</div><div class=cd><h4>${_('إجمالي الأرصدة|Total balance')}</h4><b class=n data-n=${accT()} style="font-size:28px">${fm(accT())}</b><p class=bc>${_('التحويل بين الحسابات لا يُحتسب دخلًا ولا مصروفًا.|Transfers are never counted as income or expense.')}</p></div></div><div class="g c2">${S.accs.map(a=>`<div class=cd><div class=ft><span class=cb>${SYM[a.cur]}</span><b style="flex:1;margin-inline:10px">${a.n}</b><span class=bc>${_({cash:'نقدية|Cash',bank:'بنك|Bank',wallet:'محفظة|Wallet',savings:'ادخار|Savings',other:'أخرى|Other'}[a.t])}</span></div><b class=n data-n=${bal(a)} style="font-size:22px">${fm(bal(a),a.cur)}</b>${S.tx.filter(r=>eff(r,a.id)).sort((x,y)=>y.d.localeCompare(x.d)).slice(0,3).map(r=>`<div class=row>${r.d}<span>${lab(r)}</span><b>${fm(r.a,r.c)}</b></div>`).join('')}<button class=bt style="margin-top:8px" data-a=da data-v=${a.id}>${_('حذف|Delete')}</button></div>`).join('')}</div>`;
 PG.budgets=()=>`${hd('تحكم في الإنفاق|Control spending','حدد سقفًا لكل تصنيف وتابع الاستهلاك|Set a limit per category and watch usage',addb('bud','ميزانية جديدة|New budget'))}<div class="g c2">${S.bud.map(b=>{const l=cv(b.l,b.cur),s=spent(b),p=s/l*100,col=p>=90?'#c2453d':'var(--g)';return `<div class=cd><div class=ft><b>${_(CAT[b.ci])}</b><span class=bc>${_({m:'شهرية|Monthly',w:'أسبوعية|Weekly',y:'سنوية|Yearly'}[b.p])}</span></div><div style="position:relative">${pb(p,col,'fl')}${[50,75,90].map(t=>`<i style="position:absolute;top:-2px;inset-inline-start:${t}%;height:13px;width:1px;background:var(--mut)"></i>`).join('')}</div><div class=ft style="margin-top:6px"><span>${fm(s)} / ${fm(l)}</span><b style="color:${col}">${p.toFixed(0)}%</b></div><small class=bc>${_('المتبقي|Left')} ${fm(Math.max(0,l-s))}</small> <button class=ib data-a=db data-v=${b.id}>✕</button></div>`}).join('')}</div>`;
 function reportRows(){const r=R,y=S.year,f=x=>(!r.c||x.c==r.c)&&(!r.k||x.cat==r.k)&&(!+r.m||+x.d.slice(5,7)==+r.m);const per=t=>{const a=Array(12).fill(0),n=Array(12).fill(0);S.tx.filter(x=>x.t==t&&+x.d.slice(0,4)==y&&f(x)).forEach(x=>{a[+x.d.slice(5,7)-1]+=B(x);n[+x.d.slice(5,7)-1]++});return[a,n]};
@@ -1086,9 +1102,28 @@ const OZ=31.1034768,PUR={24:.999,22:.9167,21:.875,18:.75},gUSDg=()=>Number(S.gol
 const GT=['سبائك ذهب|Gold bars','عملات ذهبية|Gold coins','مشغولات ذهبية|Jewelry','جنيه / ليرة ذهب|Sovereigns','ذهب كسر|Scrap gold','أخرى|Other'];
 let LV={ok:0,fail:0,fx:0,fxTry:0,fxOK:0,dir:0},NA=0,PREV={},FIRST=1,LASTID=0,GOLD_RANGE=30,GOLD_SELECTED=-1;
 async function jf(u){const c=new AbortController(),t=setTimeout(()=>c.abort(),8000);try{const r=await fetch(u,{signal:c.signal,cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(t)}}
+let GOLD_DAILY_TRY=0;
+async function refreshGoldDailyCandles(force){
+ const now=Date.now(),savedAt=Date.parse(S.gold&&S.gold.dailyFetchedAt||'')||0;
+ if(!force&&GOLD_DAILY_TRY&&now-GOLD_DAILY_TRY<900000)return false;
+ if(!force&&savedAt&&now-savedAt<21600000)return false;
+ GOLD_DAILY_TRY=now;
+ try{
+  const payload=await jf('https://xaus.com/api/v1/chart?symbol=xau&range=3mo&interval=1d');
+  const candles=goldNormalizeDailyCandles(payload);
+  const state=payload&&payload.data_state&&payload.data_state.status||'unknown';
+  if(candles.length<2||state==='unavailable')throw new Error('No validated daily OHLC candles returned');
+  S.gold={...S.gold,dailyCandles:candles,dailyFetchedAt:new Date().toISOString(),dailyState:state,dailySource:(payload&&payload.data_state&&payload.data_state.source)||payload.source||'XAUS'};
+  save();
+  const active=document.activeElement,tag=active&&active.tagName||'';
+  if(PAGE()==='invest'&&!document.querySelector('.ov')&&!/INPUT|SELECT|TEXTAREA/.test(tag)){NA=1;build();NA=0}
+  return true;
+ }catch(e){return false}
+}
 const adenDay=()=>{const p=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Aden',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),v={};p.forEach(x=>{v[x.type]=x.value});return v.year+'-'+v.month+'-'+v.day};
 async function live(man){
  let ch=0,gold=null;
+ refreshGoldDailyCandles(!!man).catch(()=>{});
  try{
   const x=await jf('https://xaus.com/api/v1/spot?currency=USD&unit=gram&compact=1');
   const oz=Number(x&&x.spot_usd_oz),gram=Number(x&&(x.per_gram_usd||(x.xau&&x.xau.price)));
