@@ -1,0 +1,24 @@
+{
+  "name": "wallet-os-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android container and build scripts for WALLET OS",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.2.0"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "mobile:prepare": "node scripts/prepare-mobile.js",
+    "android:add": "npm run mobile:prepare && cap add android",
+    "android:sync": "npm run mobile:prepare && cap sync android",
+    "android:build": "npm run android:sync && cd android && ./gradlew --no-daemon assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}
