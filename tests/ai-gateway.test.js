@@ -126,6 +126,8 @@ test('gold hero card follows the active theme and remains compact', () => {
   assert.match(html, /const AI_GATEWAY_MODEL='google\/gemini-3\.1-flash-lite'/);
   assert.match(html, /provider:'vercel',model:AI_GATEWAY_MODEL/);
   assert.match(html, /Vercel AI Gateway/);
+  assert.match(html, /z\.version===2&&AI_PROVIDERS\.includes\(z\.provider\)/);
+  assert.match(html, /version:2/);
 });
 
 
@@ -157,6 +159,42 @@ test('AI Gateway health check verifies the OIDC model endpoint without generatin
     assert.equal(res.body.noPromptTrainingEndpoints, 1);
     assert.match(captured.url, /models\/google\/gemini-3\.1-flash-lite\/endpoints$/);
     assert.equal(captured.options.headers.Authorization, 'Bearer test-vercel-oidc-token');
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+
+test('AI Gateway rejects requests when no no-training provider is available', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async url => {
+    if (String(url).endsWith('/auth/v1/user')) {
+      return new Response(JSON.stringify({ id: 'test-user-3' }), {
+        status: 200, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    if (String(url).endsWith('/v1/chat/completions')) {
+      return new Response(JSON.stringify({
+        error: { message: 'No providers available for the no-prompt-training constraint.' }
+      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+    }
+    throw new Error('Unexpected URL: ' + String(url));
+  };
+  try {
+    const res = makeResponse();
+    await aiHandler(makeRequest({
+      body: {
+        provider: 'vercel',
+        messages: [{ role: 'user', content: 'synthetic private-data test' }]
+      },
+      headers: {
+        authorization: 'Bearer test-supabase-access-token',
+        'x-vercel-oidc-token': 'test-vercel-oidc-token'
+      }
+    }), res);
+    assert.equal(res.statusCode, 503);
+    assert.equal(res.body.code, 'NO_TRAINING_UNAVAILABLE');
+    assert.match(res.body.error, /No providers available/);
   } finally {
     global.fetch = originalFetch;
   }
