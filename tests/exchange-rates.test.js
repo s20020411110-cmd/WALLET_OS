@@ -358,16 +358,27 @@ test('portfolio P/L chart separates realized and unrealized gains and losses by 
   assert.ok(chart.includes('Unrealized'));
   assert.ok(chart.includes('Gold bar'));
   assert.ok(chart.includes('Gold coin'));
-  assert.ok(chart.includes('pl-bar up'));
-  assert.ok(chart.includes('pl-bar down'));
+  assert.ok(chart.includes('capital-line-chart'));
+  assert.ok(chart.includes('capital-series-invested'));
+  assert.ok(chart.includes('capital-series-current'));
+  assert.ok(chart.includes('capital-selection'));
+  assert.ok(chart.includes('Gold bar'));
+  assert.ok(chart.includes('Gold coin'));
   assert.ok(chart.includes('$320.00'));
 });
 
-test('investment page binds the lower chart and KPI to total realized plus unrealized P/L', () => {
+test('investment page places one unified portfolio chart beside gold allocation', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  assert.match(html, /plRows=portfolioPLRows\(A\),pl=Z\(plRows\.map\(row=>row\.total\)\)/);
-  assert.match(html, /portfolioPLChart\(A\)/);
-  assert.match(html, /const unrealized=p\.v-p\.c,total=unrealized\+p\.pl/);
+  const start = html.indexOf('PG.invest=()=>');
+  const end = html.indexOf('PG.budgets=()=>', start);
+  const page = html.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.equal(page.split('portfolioPLChart(A)').length - 1, 1);
+  assert.match(page, /portfolioPLChart\\(A\\)/);
+  assert.match(page, /توزيع الذهب\\|Gold allocation/);
+  assert.match(html, /const unrealized=p\\.v-p\\.c,total=unrealized\\+p\\.pl/);
+  assert.match(html, /const realized=rows\\.reduce/);
+  assert.match(html, /const total=rows\\.reduce/);
   assert.match(html, /interval=1d/);
   assert.match(html, /symbol=xau&range=3mo&interval=1d/);
 });
