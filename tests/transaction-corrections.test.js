@@ -30,6 +30,17 @@ test('cloud edits use the audited replacement transaction RPC', () => {
   assert.match(helper, /await cloudRefresh\(\)/);
 });
 
+test('duplicate standalone request-key indexes are cleaned up without dropping the surviving unique indexes', () => {
+  const migration = fs.readFileSync(path.join(__dirname, '..', 'supabase', 'wallet_os_duplicate_request_indexes_cleanup_v1.sql'), 'utf8');
+  for (const name of [
+    'uq_budgets_owner_category_period',
+    'uq_investment_assets_request',
+    'uq_loans_request',
+    'uq_savings_goals_request'
+  ]) assert.match(migration, new RegExp('drop index if exists public\\\\.' + name, 'i'));
+  assert.doesNotMatch(migration, /drop index if exists public\.(budgets_user_period_unique|investment_assets_user_request_key_unique|loans_user_request_key_unique|savings_goals_user_request_key_unique)/i);
+});
+
 test('public transaction edit/delete RPC wrappers are invoker-rights with narrowly granted private helpers', () => {
   const migration = fs.readFileSync(path.join(__dirname, '..', 'supabase', 'wallet_os_transaction_rpc_invoker_hardening_v1.sql'), 'utf8');
   assert.match(migration, /revoke all on function private\.edit_financial_transaction\(uuid, jsonb\) from public, anon, authenticated/i);
