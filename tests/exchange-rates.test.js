@@ -374,11 +374,11 @@ test('investment page places one unified portfolio chart beside gold allocation'
   const page = html.slice(start, end);
   assert.ok(start >= 0 && end > start);
   assert.equal(page.split('portfolioPLChart(A)').length - 1, 1);
-  assert.match(page, /portfolioPLChart\\(A\\)/);
-  assert.match(page, /توزيع الذهب\\|Gold allocation/);
-  assert.match(html, /const unrealized=p\\.v-p\\.c,total=unrealized\\+p\\.pl/);
-  assert.match(html, /const realized=rows\\.reduce/);
-  assert.match(html, /const total=rows\\.reduce/);
+  assert.ok(page.includes('portfolioPLChart(A)'));
+  assert.ok(page.includes('توزيع الذهب|Gold allocation'));
+  assert.ok(html.includes('const unrealized=p.v-p.c,total=unrealized+p.pl'));
+  assert.ok(html.includes('const realized=rows.reduce'));
+  assert.ok(html.includes('const total=rows.reduce'));
   assert.match(html, /interval=1d/);
   assert.match(html, /symbol=xau&range=3mo&interval=1d/);
 });
