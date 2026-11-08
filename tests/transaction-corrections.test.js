@@ -129,7 +129,7 @@ test('cloud management RPC checks the live Supabase session and calls the owner-
 test('cloud edits preserve financial ledger balances by changing profile metadata only', () => {
   assert.match(html, /cloudManageItem\('loan',id,'update'/);
   assert.match(html, /cloudManageItem\('goal',id,'update'/);
-  assert.match(html, /cloudManageItem\('investment',id,'update'/);
+  assert.match(html, /cloudInvestmentMutation\('update'/);
   assert.match(html, /p_transaction_id/);
   assert.match(html, /cloudEditTransaction\(r,next\)/);
 });
