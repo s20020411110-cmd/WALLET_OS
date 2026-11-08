@@ -42,7 +42,7 @@ test('profit/loss chart is a single responsive line with gain/loss markers', () 
   assert.doesNotMatch(html, /capital-series-invested|capital-series-current/);
 });
 
-test('home dashboard separates seven categories and calculates their ratio against net wealth', () => {
+test('home dashboard separates seven categories and uses correct asset/income ratio bases', () => {
   const homeStart = html.indexOf('PG.home=()=>');
   const homeEnd = html.indexOf('const hl=()=>', homeStart);
   const home = html.slice(homeStart, homeEnd);
@@ -55,8 +55,8 @@ test('home dashboard separates seven categories and calculates their ratio again
   assert.match(home, /key==='income'\?100/);
   assert.match(home, /Math\.abs\(Number\(value\)\|\|0\)\/denominator\*100/);
   assert.doesNotMatch(home, /wealth=NW\(\),ratio=value/);
-  assert.match(home, /I\[c\].*Monthly income/);
-  assert.match(home, /E\[c\].*Monthly expenses/);
+  assert.match(home, /I\[c\].*Monthly income · 100% baseline/);
+  assert.match(home, /E\[c\].*Monthly expenses · share of income/);
   assert.match(home, /Z\(OW\(\)\.map\(rem\)\)/);
   assert.match(home, /Z\(LN\(\)\.map\(rem\)\)/);
   assert.doesNotMatch(home, /wallet-spark|income & expenses|debts & loans|class=tcs/);
