@@ -167,7 +167,7 @@ test('archive and restore UI is removed while existing owner records remain sele
   assert.match(html, /SB\.from\('loans'\)\.select\('\*'\)\.eq\('user_id',uid\)/);
   assert.match(html, /SB\.from\('savings_goals'\)\.select\('\*'\)\.eq\('user_id',uid\)/);
   assert.match(html, /activate_owned_financial_records/);
-  assert.match(html, /archived:false/);
+  assert.match(html, /row\.archived=false/);
   assert.match(html, /const AO=\(\)=>S\.accs\.map/);
   assert.match(html, /const LN=\(\)=>S\.loans\.filter\(l=>l\.kind!='owed'\)/);
   assert.doesNotMatch(html, /data-a=restore/);
