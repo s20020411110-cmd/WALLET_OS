@@ -932,7 +932,6 @@ async del(id){
    if(error)throw error;
    await cloudRefresh();toast(_('تم حذف المعاملة وعكس أثرها على الأرصدة.|Transaction deleted and its balance impact reversed.'));return;
   }
-  if(r.t==='buy'&&S.tx.some(x=>x.t==='sell'&&String(x.ref)===String(r.ref)&&x.d>=r.d))throw new Error(_('لا يمكن حذف شراء استُخدم في عملية بيع لاحقة. صحح عمليات البيع أولاً.|This purchase has later sales. Correct those sales first.'));
   S.tx=S.tx.filter(x=>String(x.id)!==String(id));save();build();toast(_('تم حذف المعاملة.|Transaction deleted.'));
  }catch(e){toast(e.message||String(e));}
 },
