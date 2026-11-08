@@ -238,7 +238,7 @@ function makeGoldChartHelpers(html, state = { base: 'USD', gold: { h: [] } }) {
   const source = html.slice(start, end);
   const factory = new Function(
     'sm', 'LOC', 'fm', '_', 'S', 'cv',
-    'let seq = 0, GOLD_RANGE = 30, GOLD_SELECTED = -1;\n' +
+    'const GOLD_RT_STATE = {}; function goldMarketStatusForUI(){return "fallback";} function goldMarketStatusLabel(value){return value;} function goldMarketSourceLabel(value){return value||"unknown";} function goldMarketAgeText(){return "now";} let seq = 0, GOLD_RANGE = 30, GOLD_SELECTED = -1;\n' +
       source +
       '\nreturn { goldRecordObservation, goldTrendMetrics, goldNormalizeDailyCandles, goldDailyMetrics, goldTrendChart, goldHeroCard, portfolioPLRows, portfolioPLChart };'
   );
