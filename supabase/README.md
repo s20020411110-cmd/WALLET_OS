@@ -31,6 +31,11 @@ This is a dedicated project for WALLET OS. It is not the Supabase project used b
 | 20261108061254 | wallet_os_manual_finance_categories_v1 | Owner-scoped manual income/expense categories with matching ledger accounts |
 | 20261108062844 | wallet_os_loans_linked_to_wallet_accounts_v1 | Atomic loan/receivable origination linked to the selected wallet and journal |
 | 20261108064458 | wallet_os_existing_wallet_opening_balance_v1 | One-time audited opening-balance posting for existing empty wallets |
+| 20261108091659 | wallet_os_permanent_record_deletion_v1 | Owner-scoped permanent deletion of financial records, linked journal rows and correction chains |
+| 20261108091745 | wallet_os_remove_archive_semantics_v1 | Owner-scoped reactivation of legacy archived rows for the no-archive user workflow |
+| 20261108093520 | wallet_os_disable_archive_management_actions_v1 | Disables archive/restore through the legacy cloud management RPC |
+| 20261108100135 | wallet_os_gold_realtime_channel_v1 | Private gold Broadcast authorization and a service-role-only single-worker lease |
+
 
 The first six migrations remain recorded in the hosted Supabase migration history; the eight later hardening/correction migrations above are tracked as SQL files in this repository. The exact SQL for the original core schema migrations has not yet been exported into supabase/migrations/. Preserve hosted history as the source of truth and export/review the original SQL before future local schema work rather than reconstructing it from this guide.
 
@@ -206,3 +211,21 @@ Add that same origin (and any custom production domain later adopted) to the all
 - A read-only integrity pass found no unbalanced journal entries, transactions missing journal postings, journal entries without lines, investment trades missing transaction links, or invalid open investment quantities at the time checked. No real financial records were inserted, edited, or deleted for tests.
 - The Supabase Security Advisor still reports one external Auth setting warning: leaked-password protection is disabled. This project-level Auth setting must be enabled in the Supabase Dashboard (and may require Pro plan or above); it cannot be changed by ordinary Postgres SQL through the connected tools.
 - No production deployment was performed as part of this QA follow-up.
+
+
+## Real-time XAU/USD channel — 2026-11-08
+
+- public.gold_price_quotes is reused for source-tagged historical spot snapshots. It remains RLS/FORCE RLS protected; the browser does not read or write this table for market ticks.
+- private.gold_market_worker_lease elects one worker for the XAU market stream. Acquire/renew/release helpers are SECURITY DEFINER with an empty search path; public wrappers are SECURITY INVOKER and executable only by service_role. The private lease table is not exposed to browser roles.
+- Realtime policy wallet_os_authenticated_users_read_gold_market allows only authenticated, non-anonymous clients to receive Broadcast events on the exact topic wallet-os-gold-market. No browser INSERT/publish policy is created.
+- The RLS init-plan follow-up wraps the JWT access in a scalar subquery to avoid per-row evaluation. Performance Advisor no longer reports this policy issue after that migration.
+- The worker publishes via Supabase Realtime's private REST Broadcast endpoint. The browser uses a private supabase-js channel. Price updates do not touch transactions, journal lines, investments or wallet balances.
+- A manual project setting remains required: Supabase Dashboard → Realtime → Settings → turn Allow public access off, so the private-channel authorization policy is enforced.
+
+### Operational status and outstanding gates
+
+- Database migrations applied: wallet_os_gold_realtime_channel_v1 and the RLS init-plan follow-up.
+- The worker source, test suite and Dockerfile are in market-worker/; no persistent worker host was provisioned.
+- The Vercel Hobby project's environment variable listing was empty at inspection. No Twelve Data key or Supabase server secret was present in Vercel, and no provider key was written into GitHub.
+- TWELVE_DATA_USAGE_APPROVED defaults to false. Do not enable the Twelve Data socket until XAU/USD streaming entitlement, business/commercial display rights, non-US market-data approval and any redistribution agreement are confirmed for WALLET OS.
+- No live Twelve Data tick, production persistent connection or production worker deployment is claimed.
