@@ -35,7 +35,7 @@ begin
     raise exception 'The selected account was not found or is archived';
   end if;
 
-  select id,request_fingerprint,* into v_existing
+  select * into v_existing
   from public.transactions
   where user_id=v_user and idempotency_key='opening:'||v_wallet.id::text;
   if found then
