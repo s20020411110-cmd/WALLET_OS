@@ -46,7 +46,7 @@ test('home dashboard separates seven categories and calculates their ratio again
   for (const key of ['accounts', 'income', 'expenses', 'investment', 'debts', 'loans', 'savings']) {
     assert.match(home, new RegExp("card\\('" + key + "'"));
   }
-  assert.match(home, /wallet-\\$\\{key\\}/);
+  assert.ok(home.includes('wallet-${key}'));
   assert.match(home, /wealth=NW\(\)/);
   assert.match(home, /Math\.abs\(Number\(value\)\|\|0\)\/wealth\*100/);
   assert.match(home, /I\[c\].*Income this month/);
