@@ -750,7 +750,7 @@ function toast(m){const e=document.createElement('div');e.className='ts';e.textC
 function form(ti,fs,ok){const m=document.createElement('div');m.className='ov';m.innerHTML=`<form class=md><h3>${ti}</h3>${fs.map(f=>`<label>${f[1]}${f[2]=='s'?`<select name=${f[0]}>${f[3].map(o=>`<option value="${o[0]}" ${o[0]==f[4]?'selected':''}>${o[1]}</option>`).join('')}</select>`:f[2]=='checkbox'?`<input type=checkbox name=${f[0]} ${f[4]?'checked':''}>`:`<input class=in name=${f[0]} type=${f[2]} ${f[2]=='number'?'step=any min=0':''} value="${f[4]??''}">`}</label>`).join('')}<div class=ac><button type=button class=bt data-a=cl>${_('إلغاء|Cancel')}</button><button class="bt pr">${_('حفظ|Save')}</button></div></form>`;
 m.onsubmit=async e=>{e.preventDefault();const v=Object.fromEntries(new FormData(e.target));fs.filter(f=>f[2]=='checkbox').forEach(f=>v[f[0]]=!!v[f[0]]);const submit=m.querySelector('.bt.pr');if(submit)submit.disabled=true;try{const result=await ok(v);if(result!==false){m.remove();save();build();}}catch(err){toast(err.message||String(err));if(submit)submit.disabled=false;}};document.body.append(m);const f=m.querySelector('input,select');f&&f.focus()}
 const AO=()=>S.accs.filter(a=>!a.archived).map(a=>[a.id,a.n+' · '+a.cur]);
-function addTx(t,pre={}){const R2={trf:AO(),sav:S.goals.filter(g=>!g.archived).map(g=>[g.id,g.n]),pay:S.loans.filter(l=>!l.archived).map(l=>[l.id,l.n]),buy:S.inv.filter(a=>!a.archived).map(a=>[a.id,a.n]),sell:S.inv.filter(a=>!a.archived).map(a=>[a.id,a.n])}[t];
+function addTx(t,pre={}){const R2={trf:AO(),sav:S.goals.filter(g=>!g.archived).map(g=>[g.id,g.n]),pay:S.loans.filter(l=>!l.archived).map(l=>[l.id,l.n]),buy:S.inv.map(a=>[a.id,a.n]),sell:S.inv.map(a=>[a.id,a.n])}[t];
 if(R2&&!R2.length)return toast(_('أنشئ العنصر المرتبط أولًا|Create the related item first'));
 const f=[['a',_('المبلغ|Amount'),'number'],['c',_('العملة|Currency'),'s',CUR,S.base],['d',_('التاريخ|Date'),'date',,TD],['acc',_('الحساب|Account'),'s',AO()]];
 if(t=='inc')f.push(['cat',_('المصدر|Source'),'s',SRC.map((s,i)=>[i,_(s)])]);
@@ -943,7 +943,7 @@ ed(id){
  if(r.t==='trf')f.push(['ref',_('الحساب المستلم|Destination account'),'s',AO(),r.ref],['ta',_('المبلغ الذي يصل للحساب المستلم|Amount received'),'number',,r.ta==null?Math.abs(Number(r.a)):r.ta]);
  if(r.t==='sav')f.push(['flow',_('نوع الحركة|Movement'),'s',[['in',_('إيداع في الادخار|Deposit to savings')],['out',_('سحب من الادخار|Withdraw from savings')]],Number(r.a)<0?'out':'in'],['ref',_('هدف الادخار|Savings goal'),'s',S.goals.filter(g=>!g.archived).map(g=>[g.id,g.n]),r.ref]);
  if(r.t==='pay')f.push(['ref',_('القرض أو الدين|Loan or debt'),'s',S.loans.filter(l=>!l.archived).map(l=>[l.id,l.n]),r.ref]);
- if(r.t==='buy'||r.t==='sell')f.push(['ref',_('الأصل الاستثماري|Investment asset'),'s',S.inv.filter(a=>!a.archived||String(a.id)===String(r.ref)).map(a=>[a.id,a.n]),r.ref],['q',_('الكمية|Quantity'),'number',,r.q||'']);
+ if(r.t==='buy'||r.t==='sell')f.push(['ref',_('الأصل الاستثماري|Investment asset'),'s',S.inv.map(a=>[a.id,a.n]),r.ref],['q',_('الكمية|Quantity'),'number',,r.q||'']);
  f.push(['note',_('الوصف|Description'),'text',,r.note||'']);
  if(r.t==='inc'||r.t==='exp')f.push(['rec',_('مصروف/دخل متكرر|Recurring'),'checkbox',,!!r.rec]);
  form(_('تعديل المعاملة|Edit transaction'),f,async v=>{
@@ -1021,13 +1021,16 @@ ib(id){addTx('buy',{ref:id})},is(id){addTx('sell',{ref:id})},ip(id){
  const a=S.inv.find(z=>String(z.id)===String(id));if(!a)return;
  form(_('تعديل الأصل الاستثماري|Edit investment asset'),[
   ['n',_('اسم الأصل|Asset name'),'text',,a.n],
+  ['type',_('نوع الذهب|Gold type'),'s',GT.map((s,i)=>[i,_(s)]),a.type??0],
   ['karat',_('العيار|Karat'),'s',[[24,'24K'],[22,'22K'],[21,'21K'],[18,'18K']],a.karat||24],
   ['p',_('سعر الجرام اليدوي (اختياري)|Manual price per gram (optional)'),'number',,a.price==null?'':a.price]
  ],async v=>{
-  const price=String(v.p||'').trim()===''?null:Number(v.p);
-  if(!String(v.n||'').trim()||(price!==null&&(!Number.isFinite(price)||price<0))){toast(_('تحقق من اسم الأصل والسعر.|Check asset name and price.'));return false;}
-  if(CLOUD_USER){await cloudManageItem('investment',id,'update',{name:v.n.trim(),karat:Number(v.karat),current_unit_price:price});toast(_('تم تحديث بيانات الأصل.|Investment asset updated.'));}
-  else Object.assign(a,{n:v.n.trim(),karat:Number(v.karat),price});
+  const price=String(v.p||'').trim()===''?null:Number(v.p),type=Number(v.type);
+  if(!String(v.n||'').trim()||v.n.trim().length>100||![0,1,2,3,4,5].includes(type)||(price!==null&&(!Number.isFinite(price)||price<0))){toast(_('تحقق من الاسم والنوع والعيار والسعر.|Check the name, gold type, karat and price.'));return false;}
+  if(CLOUD_USER){
+   await cloudInvestmentMutation('update',{investmentId:id,name:v.n.trim(),type,karat:Number(v.karat),price});
+   toast(_('تم تحديث الأصل الاستثماري.|Investment asset updated.'));
+  }else Object.assign(a,{n:v.n.trim(),type,karat:Number(v.karat),price,archived:false});
   return true;
  })
 },
