@@ -71,3 +71,21 @@ test('investment assets provide edit and permanent delete only, with no archive 
   assert.match(html, /cloudInvestmentMutation\('delete_asset'/);
   assert.match(html, /else purgeInvestmentLocalCopies\(\[id\],\[\],null\)/);
 });
+
+
+test('investment transaction deletion is permanent for buys and sells, while other ledger deletions stay audited reversals', () => {
+  const actionsStart = html.indexOf('const A={');
+  const deleteStart = html.indexOf('async del(id){', actionsStart);
+  const editStart = html.indexOf('\ned(id){', deleteStart);
+  const deleteHandler = html.slice(deleteStart, editStart);
+  assert.ok(deleteStart > actionsStart && editStart > deleteStart);
+  assert.match(deleteHandler, /r\.t==='buy'\|\|r\.t==='sell'/);
+  assert.match(deleteHandler, /cloudInvestmentMutation\('delete_transaction'/);
+  assert.match(deleteHandler, /purgeInvestmentLocalCopies\(\[\], \[r\.id\], null\)/);
+  assert.match(deleteHandler, /if\(!confirm\(prompt\)\)return/);
+  assert.match(deleteHandler, /delete this investment operation/);
+  assert.match(deleteHandler, /void_financial_transaction/);
+  assert.match(html, /Permanently delete this asset/);
+  assert.match(html, /Permanently delete this investment operation/);
+});
+
