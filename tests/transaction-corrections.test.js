@@ -30,6 +30,16 @@ test('cloud edits use the audited replacement transaction RPC', () => {
   assert.match(helper, /await cloudRefresh\(\)/);
 });
 
+test('public transaction edit/delete RPC wrappers are invoker-rights with narrowly granted private helpers', () => {
+  const migration = fs.readFileSync(path.join(__dirname, '..', 'supabase', 'wallet_os_transaction_rpc_invoker_hardening_v1.sql'), 'utf8');
+  assert.match(migration, /revoke all on function private\.edit_financial_transaction\(uuid, jsonb\) from public, anon, authenticated/i);
+  assert.match(migration, /revoke all on function private\.reverse_financial_transaction\(uuid, text\) from public, anon, authenticated/i);
+  assert.match(migration, /grant execute on function private\.edit_financial_transaction\(uuid, jsonb\) to authenticated/i);
+  assert.match(migration, /grant execute on function private\.reverse_financial_transaction\(uuid, text\) to authenticated/i);
+  assert.match(migration, /alter function public\.edit_financial_transaction\(uuid, jsonb\) security invoker/i);
+  assert.match(migration, /alter function public\.void_financial_transaction\(uuid, text\) security invoker/i);
+});
+
 test('cloud deletion requires confirmation and calls the audited void RPC', () => {
   const start = html.indexOf('async del(id){');
   const end = html.indexOf('\nel(id)', start);
