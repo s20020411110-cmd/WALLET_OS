@@ -3,3 +3,7 @@ www/
 android/
 *.apk
 *.aab
+.env
+.env.*
+!.env.example
+market-worker/.env
