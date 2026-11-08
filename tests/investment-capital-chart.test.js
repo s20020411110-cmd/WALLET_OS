@@ -13,7 +13,10 @@ test('gold page shows only a clear profit/loss summary and one line chart', () =
   assert.ok(pageStart >= 0 && pageEnd > pageStart, 'gold page should exist');
   assert.match(investmentPage, /portfolioPLChart\(A\)/);
   assert.match(investmentPage, /الربح والخسارة\|Profit & loss/);
-  assert.doesNotMatch(investmentPage, /goldHeroCard\(g\)|goldKaratStrip\(g\)|donut\(by\)|investment-insights/);
+  assert.match(investmentPage, /goldHeroCard\(g\)/);
+  assert.match(investmentPage, /goldTrendChart\(g\)/);
+  assert.match(investmentPage, /حركة سعر الذهب العالمي\|Global gold price movement/);
+  assert.doesNotMatch(investmentPage, /goldKaratStrip\(g\)|donut\(by\)|investment-insights/);
   assert.doesNotMatch(investmentPage, /رأس المال المستثمر والربح والخسارة حسب الأصل|توزيع الذهب\|Gold allocation/);
 });
 
