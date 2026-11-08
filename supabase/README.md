@@ -166,12 +166,11 @@ Add that same origin (and any custom production domain later adopted) to the all
 ## Remaining integration work
 
 - In Supabase Dashboard → Authentication → URL Configuration, set Site URL to `https://wallet-os-s20020411110-8096.vercel.app` and add this origin to allowed Redirect URLs. The Auth configuration cannot be updated by the currently connected Supabase tools.
-- Enable Leaked Password Protection in Authentication → Password Security (HaveIBeenPwned/Pwned Passwords check). Supabase documents this as a Pro-plan-and-above feature; the current connected tools cannot change project Auth configuration. Re-run the Security Advisor after enabling it.
+- Enable Leaked Password Protection in Authentication → Password Security (HaveIBeenPwned/Pwned Passwords check). Supabase reports this as the sole remaining Security Advisor warning; the current connected tools cannot change project Auth configuration. Re-run the Security Advisor after enabling it.
 - Verify an actual user sign-up/sign-in through the deployed URL after the redirect allowlist is configured, including email-confirmation behavior.
 - Verify a representative local-data import against a real user account and reconcile opening balances before removing or archiving the device copy.
-- Build audited update/archive RPCs for cloud entity metadata and a correction/reversal workflow for posted transactions.
 - Add trusted server-side ingestion for the exchange-rate and gold-quote tables; the app currently continues to fetch/retain market quotes through its existing browser/API path.
-- Validate the production project's access-protection and domain settings with the intended users.
+- Validate production access-protection and domain settings after a later deployment is permitted.
 
 ## Finance workflow integration — 2026-11-08
 
@@ -183,6 +182,16 @@ Add that same origin (and any custom production domain later adopted) to the all
 - A rollback-only Supabase integration check created a temporary wallet with 100 SAR, originated a 40 SAR borrowed loan and a 20 SAR receivable, then verified a 120 SAR wallet balance, a 40 SAR loan liability, a 20 SAR receivable asset and balanced journal entries. A separate rollback-only check verified manual expense-category creation, its ledger account and duplicate-name reuse. Both enclosing transactions were rolled back; no test records were left behind.
 - The new loan RPC wrapper is SECURITY INVOKER; its private implementation is SECURITY DEFINER with an empty search path, checks `auth.uid()` ownership and has execute grants only for authenticated users. The anon role has no execute permission.
 - Deployment remains deliberately deferred. These source and database changes are not claimed to be live on the production URL.
+
+## Finance workflow CI verification — 2026-11-08
+
+- Latest application/test source commit verified: `324d76752b41ccf9b58db2e96b183d56de1dbe5f`.
+- GitHub Actions Market data validation run `42455596878` passed **73/73 tests** (0 failed, 0 skipped): https://github.com/s20020411110-cmd/WALLET_OS/actions/runs/42455596878
+- Android Debug build run `42455596870` completed successfully through regression tests, Capacitor preparation/sync, Gradle build, APK verification and artifact upload: https://github.com/s20020411110-cmd/WALLET_OS/actions/runs/42455596870
+- Uploaded artifact: `WALLET-OS-debug-APK`, artifact ID `13607701149`, 3,861,731 bytes, expires 2026-12-08. This is a Debug APK, not a signed Release build.
+- The rollback-only Supabase checks for a 100 SAR opening wallet, 40 SAR borrowed loan and 20 SAR receivable confirmed the expected 120 SAR wallet balance, 40 SAR liability, 20 SAR receivable and balanced journal entries. Manual expense-category creation and duplicate-name reuse also passed. Test transactions were rolled back.
+- The post-test read-only integrity check found zero active transactions without journals, zero journal entries without lines, zero unbalanced journal entries, and zero loan-disbursement transactions without a linked loan.
+- No production deployment, rollback, or Vercel setting change was performed. The verified source is not claimed to be live.
 
 ## QA and integrity follow-up — 2026-11-08
 
