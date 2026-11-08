@@ -197,7 +197,7 @@ test('investment asset edits and permanent deletion bypass archive management', 
 
 test('manual income and expense categories are persisted as owner-scoped cloud category IDs', () => {
   assert.match(html, /function resolveFinanceCategory\(direction,name\)/);
-  assert.match(html, /SB\.rpc\('create_finance_category'/);
+  assert.match(html, /cloudRpc\('create_finance_category'/);
   assert.match(html, /if\(t=='inc'\)f\.push\(\['catName'/);
   assert.match(html, /if\(t=='exp'\)f\.push\(\['catName'/);
   assert.match(html, /cat=v\.categoryId\|\|cloudCategoryId\(type,v\.cat\)/);
@@ -231,7 +231,7 @@ test('loans and receivables have separate pages and creation paths', () => {
   assert.match(html, /PG\.loans=\(\)=>\{const rows=LN\(\)/);
   assert.match(html, /PG\.debts=\(\)=>\{const rows=OW\(\)/);
   assert.match(html, /function addLoan\(kind='loan'\)/);
-  assert.match(html, /function addDebt\(\)\{addLoan\('owed'\)\}/);
+  assert.match(html, /function addDebt\(\)\{addLoan\('owed'\);\}/);
   assert.match(html, /loan:\(\)=>addLoan\('loan'\),debt:addDebt/);
   assert.match(html, /card\('debts',[^\n]*'debts'/);
 });
@@ -271,7 +271,7 @@ test('loan origination migration creates one owner-scoped balanced wallet and de
   assert.match(migration,/amount_debit,base_debit/);
   assert.match(migration,/amount_credit,base_credit/);
   assert.doesNotMatch(migration,/alter table/i);
-  assert.match(migration,/alter function public\.create_loan_from_account_v1[\s\S]*security invoker/i);
+  assert.match(migration,/create or replace function public\.create_loan_from_account_v1[\s\S]*security invoker/i);
   assert.match(migration,/revoke all on function private\.create_loan_from_account_v1[\s\S]*from public,anon,authenticated/i);
   assert.match(migration,/grant execute on function private\.create_loan_from_account_v1[\s\S]*to authenticated/i);
 });
