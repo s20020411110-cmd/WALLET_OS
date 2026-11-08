@@ -51,13 +51,15 @@ test('public transaction edit/delete RPC wrappers are invoker-rights with narrow
   assert.match(migration, /alter function public\.void_financial_transaction\(uuid, text\) security invoker/i);
 });
 
-test('cloud deletion requires confirmation and calls the audited void RPC', () => {
+test('cloud deletion requires confirmation and calls the permanent delete RPC', () => {
   const start = html.indexOf('async del(id){');
   const end = html.indexOf('\nel(id)', start);
   assert.ok(start >= 0 && end > start, 'delete action should exist');
   const handler = html.slice(start, end);
   assert.match(handler, /confirm\(/);
-  assert.match(handler, /SB\.rpc\('void_financial_transaction'/);
+  assert.match(handler, /SB\.rpc\('delete_financial_transaction'/);
+  assert.match(handler, /cloudManageItem\('loan',r\.ref,'delete'\)/);
+  assert.doesNotMatch(handler, /void_financial_transaction/);
   assert.match(handler, /await cloudRefresh\(\)/);
 });
 
@@ -134,9 +136,9 @@ test('cloud management actions no longer use the legacy cloud-blocked message', 
     "cloudManageItem('goal',id,'update'",
     "cloudManageItem('goal',id,'pause'",
     "cloudInvestmentMutation('update'",
-    "cloudManageItem('loan',id,'archive'",
-    "cloudManageItem('goal',id,'archive'",
-    "cloudManageItem('wallet',id,'archive'",
+    "cloudManageItem('loan',id,'delete'",
+    "cloudManageItem('goal',id,'delete'",
+    "cloudManageItem('wallet',id,'delete'",
     "cloudManageItem('budget',id,'delete'"
   ]) assert.ok(html.includes(action), 'missing cloud management route: ' + action);
 });
@@ -149,6 +151,7 @@ test('cloud management RPC checks the live Supabase session and calls the owner-
   assert.match(helper, /SB\.auth\.getSession\(\)/);
   assert.match(helper, /sessionData\.session\.user\.id!==CLOUD_USER\.id/);
   assert.match(helper, /SB\.rpc\('manage_financial_item'/);
+  assert.match(helper, /SB\.rpc\('delete_financial_item'/);
   assert.match(helper, /await cloudRefresh\(\)/);
 });
 
@@ -160,13 +163,93 @@ test('cloud edits preserve financial ledger balances by changing profile metadat
   assert.match(html, /cloudEditTransaction\(r,next\)/);
 });
 
-test('archived records remain loaded for transaction history and balances, while selectors show active records only', () => {
+test('archive and restore UI is removed while existing owner records remain selectable', () => {
   assert.match(html, /SB\.from\('loans'\)\.select\('\*'\)\.eq\('user_id',uid\)/);
   assert.match(html, /SB\.from\('savings_goals'\)\.select\('\*'\)\.eq\('user_id',uid\)/);
-  assert.match(html, /archived:!!l\.is_archived/);
-  assert.match(html, /stop:!!g\.is_paused/);
-  assert.match(html, /const AO=\(\)=>S\.accs\.filter\(a=>!a\.archived\)/);
-  assert.match(html, /NW=\(\)=>accT\(\)\+savT\(\)\+invV\(\)\+Z\(S\.loans\.filter/);
+  assert.match(html, /activate_owned_financial_records/);
+  assert.match(html, /archived:false/);
+  assert.match(html, /const AO=\(\)=>S\.accs\.map/);
+  assert.match(html, /const LN=\(\)=>S\.loans\.filter\(l=>l\.kind!='owed'\)/);
+  assert.doesNotMatch(html, /data-a=restore/);
+  assert.doesNotMatch(html, /أرشفة|استعادة\|Restore/);
+});
+
+test('account cards use number formatting and provide edit/delete for linked transactions', () => {
+  const start = html.indexOf('PG.accounts=()=>');
+  const end = html.indexOf('PG.income=()=>', start);
+  const page = html.slice(start, end);
+  assert.match(page, /kc\('عدد الحسابات\|Accounts',accounts\.length,'',null,'var\(--g\)','','#'\)/);
+  assert.match(page, /data-a=ea/);
+  assert.match(page, /data-a=xa/);
+  assert.match(page, /data-a=ed data-v=\$\{t\.id\}/);
+  assert.match(page, /data-a=del data-v=\$\{t\.id\}/);
+});
+
+test('global activity exposes edit and delete for loan origination as well as every ordinary transaction', () => {
+  const start=html.indexOf('const actList=ts=>');
+  const end=html.indexOf('\nconst tbody=',start);
+  const renderer=html.slice(start,end);
+  assert.match(renderer,/data-a=ed/);
+  assert.match(renderer,/data-a=del/);
+  assert.doesNotMatch(renderer,/r\.t==='disb'\?'':/);
+});
+
+test('investment page connects trades to wallet accounts and shows portfolio totals', () => {
+  assert.match(html,/data-a=investFromAccount/);
+  assert.match(html,/Funding wallet account/);
+  assert.match(html,/p_account_id:source\.id/);
+  assert.match(html,/p_related_investment_id:asset\?asset\.id:null/);
+  assert.match(html,/القيمة الحالية\|Current value/);
+  assert.match(html,/حسابات التمويل\|Funding accounts/);
+});
+
+test('loan origination correction updates principal and deletion removes dependent movements', () => {
+  const start=html.indexOf('async del(id){');
+  const end=html.indexOf('\ned(id)',start);
+  const handler=html.slice(start,end);
+  assert.match(handler,/loanOrigination/);
+  assert.match(handler,/cloudManageItem\('loan',r\.ref,'delete'\)/);
+  assert.match(handler,/S\.loans=S\.loans\.filter/);
+  const editorStart=html.indexOf('ed(id){',start);
+  const editorEnd=html.indexOf('\nel(id)',editorStart);
+  const editor=html.slice(editorStart,editorEnd);
+  assert.match(editor,/amount\+1e-8<paid/);
+  assert.match(editor,/loan\.orig=amount/);
+  assert.match(html,/type='loan_disbursement'/);
+});
+
+test('budget rows expose editing and permanent deletion in local and cloud storage', () => {
+  assert.match(html,/data-a=ebud data-v=\$\{b\.id\}/);
+  assert.match(html,/async ebud\(id\)/);
+  assert.match(html,/SB\.from\('budgets'\)\.update\(payload\)/);
+  assert.match(html,/async db\(id\)/);
+  assert.match(html,/cloudManageItem\('budget',id,'delete'\)/);
+});
+
+test('permanent deletion migration is owner-scoped and removes journal and correction dependencies', () => {
+  const migration=fs.readFileSync(path.join(__dirname,'..','supabase','wallet_os_permanent_record_deletion_v1.sql'),'utf8');
+  assert.match(migration,/create or replace function private\.delete_financial_item_impl/i);
+  assert.match(migration,/create or replace function private\.delete_financial_transaction_impl/i);
+  assert.match(migration,/auth\.uid\(\)/i);
+  assert.match(migration,/security definer[\s\S]*set search_path to ''/i);
+  assert.match(migration,/reversal_of = null[\s\S]*replacement_transaction_id = null/i);
+  assert.match(migration,/delete from public\.transactions/i);
+  assert.match(migration,/delete from public\.loans/i);
+  assert.match(migration,/delete from public\.audit_logs/i);
+  assert.match(migration,/delete_investment_data_impl/i);
+  assert.match(migration,/alter function public\.delete_financial_transaction\(uuid\) security invoker/i);
+  assert.match(migration,/grant execute on function public\.delete_financial_item[\s\S]*to authenticated/i);
+});
+
+test('archive workflow removal migration changes only rows owned by the signed-in user', () => {
+  const migration=fs.readFileSync(path.join(__dirname,'..','supabase','wallet_os_remove_archive_semantics_v1.sql'),'utf8');
+  assert.match(migration,/create or replace function private\.activate_owned_financial_records_impl/i);
+  assert.match(migration,/auth\.uid\(\)/i);
+  assert.match(migration,/update public\.wallet_accounts[\s\S]*where user_id = v_user/i);
+  assert.match(migration,/update public\.loans[\s\S]*where user_id = v_user/i);
+  assert.match(migration,/update public\.savings_goals[\s\S]*where user_id = v_user/i);
+  assert.match(migration,/update public\.investment_assets[\s\S]*where user_id = v_user/i);
+  assert.match(migration,/alter function public\.activate_owned_financial_records\(\) security invoker/i);
 });
 
 test('manual investment unit prices persist in the cloud and override spot-derived gram values only when set', () => {
@@ -255,8 +338,9 @@ test('new loan and receivable origination is atomic with the selected bank or ca
   assert.match(html, /t:'disb',a:principal,c:v\.cur,d:v\.start\|\|TD,acc:wallet\.id,ref:id/);
   assert.match(html, /loan_disbursement:'disb'/);
   assert.match(html, /\(k==='pay'\|\|k==='disb'\)\?t\.related_loan_id/);
-  assert.match(html, /r\.t==='disb'\?'':/);
-  assert.match(html, /r\.t==='disb'\)return toast/);
+  assert.match(html, /type='loan_disbursement'/);
+  assert.match(html, /if\(r\.t==='disb'\)\{const loan=/);
+  assert.doesNotMatch(html, /r\.t==='disb'\)return toast/);
   assert.match(html, /history=S\.tx\.filter\(x=>\(x\.t==='pay'\|\|x\.t==='disb'\)/);
 });
 
