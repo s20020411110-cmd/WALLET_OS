@@ -919,9 +919,20 @@ quick(){const m=document.createElement('div');m.className='ov';m.onclick=e=>{if(
 hbs(i,b){b.closest('svg').querySelectorAll('.mh').forEach(g=>g.classList.toggle('on',g===b))},qa(t){document.querySelector('.ov').remove();addTx(t)},cl(){document.querySelector('.ov').remove()},
 async del(id){
  const r=S.tx.find(z=>String(z.id)===String(id));if(!r)return;
- if(!confirm(_('تأكيد حذف المعاملة؟ سيتم عكس أثرها على الأرصدة مع الاحتفاظ بسجل التصحيح.|Delete this transaction? Its balance impact will be reversed and a correction record retained.')))return;
+ const investmentOperation=r.t==='buy'||r.t==='sell';
+ if(investmentOperation&&r.t==='buy'&&!investmentLedgerValidAfterEdit(r.ref,r.id,null))return toast(_('لا يمكن حذف عملية الشراء لأن هناك مبيعات لاحقة تعتمد عليها. احذف المبيعات التابعة أولًا.|This purchase cannot be deleted because later sales depend on it. Delete those sales first.'));
+ const prompt=investmentOperation
+  ?_('تأكيد الحذف النهائي لهذه العملية؟ سيتم حذف العملية وقيدها المحاسبي وسجلات التصحيح المرتبطة بها من التخزين المحلي والسحابي نهائيًا.|Permanently delete this investment operation? Its transaction, journal posting and linked correction records will be permanently removed from local and cloud storage.')
+  :_('تأكيد حذف المعاملة؟ سيتم عكس أثرها على الأرصدة مع الاحتفاظ بسجل التصحيح.|Delete this transaction? Its balance impact will be reversed and a correction record retained.');
+ if(!confirm(prompt))return;
  try{
-  if(r.t==='buy'&&!investmentLedgerValidAfterEdit(r.ref,r.id,null))throw new Error(_('لا يمكن حذف عملية شراء تعتمد عليها مبيعات لاحقة؛ صحح عمليات البيع أولًا.|This purchase is required by later sales. Correct those sales first.'));
+  if(investmentOperation){
+   if(CLOUD_USER)await cloudInvestmentMutation('delete_transaction',{investmentId:r.ref,transactionId:r.id});
+   else purgeInvestmentLocalCopies([], [r.id], null);
+   build();
+   toast(_('تم حذف عملية الاستثمار نهائيًا.|Investment operation permanently deleted.'));
+   return;
+  }
   if(CLOUD_USER){
    if(!navigator.onLine||CLOUD_OFFLINE)throw new Error(_('اتصل بالإنترنت قبل حذف معاملة سحابية. لم يتم إجراء أي تغيير.|Connect to the internet before deleting a cloud transaction. No change was made.'));
    if(!await cloudEnsureClient())throw new Error('Supabase client is unavailable.');
