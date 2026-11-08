@@ -733,7 +733,7 @@ const tp=(rs,L)=>{const m={};rs.forEach(r=>m[r.cat]=(m[r.cat]||0)+B(r));const e=
 const lab=r=>({inc:()=>r.categoryName||_(SRC[r.cat]||''),exp:()=>r.categoryName||_(CAT[r.cat]||''),trf:()=>_('تحويل إلى|To')+' '+nm(S.accs,r.ref),sav:()=>nm(S.goals,r.ref),pay:()=>nm(S.loans,r.ref),disb:()=>((S.loans.find(z=>String(z.id)===String(r.ref))||{}).kind==='owed'?_('إقراض|Lent to'):_('استلام قرض|Loan received'))+' '+nm(S.loans,r.ref),buy:()=>_('شراء|Buy')+' '+nm(S.inv,r.ref),sell:()=>_('بيع|Sell')+' '+nm(S.inv,r.ref)})[r.t]();
 const rows=ts=>{const q=Q.toLowerCase();return S.tx.filter(r=>ts.includes(r.t)&&(!q||(lab(r)+(r.note||'')+r.d).toLowerCase().includes(q))).sort((a,b)=>SORT=='a'?B(b)-B(a):b.d.localeCompare(a.d)||b.id-a.id)};
 const ICO={inc:'↗',exp:'↘',trf:'⇄',sav:'◎',pay:'◐',disb:'⇄',buy:'◈',sell:'◈'},isIn=r=>['inc','sell'].includes(r.t)||r.t=='pay'&&(S.loans.find(z=>String(z.id)===String(r.ref))||{}).kind=='owed'||r.t=='disb'&&(S.loans.find(z=>String(z.id)===String(r.ref))||{}).kind=='loan'||r.t=='sav'&&r.a<0;
-const actList=ts=>{let last='';return rows(ts).map(r=>{const i=isIn(r),h=SORT=='d'&&r.d!=last?(last=r.d,`<div class=dh>${r.d}</div>`):'';return h+`<div class="ar2${r.id==LASTID?' nr':''}"><span class="ic${i?' in':''}">${ICO[r.t]}</span><div><b>${htm(lab(r))}${r.rec?' ↻':''}</b><small>${htm(nm(S.accs,r.acc))}${r.note?' · '+htm(r.note):''}</small></div><b class="am${i?' pos':''}">${r.t=='trf'?'':i?'+':'−'}${fm(Math.abs(r.a),r.c)}</b>${r.t==='disb'?'':`<button class=ib data-a=ed data-v=${r.id} aria-label=edit title="${_('تعديل|Edit')}">✎</button><button class=ib data-a=del data-v=${r.id} aria-label=del title="${_('حذف|Delete')}">✕</button>`}</div>`}).join('')||`<p class=em>${_('لا توجد عمليات بعد|No transactions yet')}</p>`};
+const actList=ts=>{let last='';return rows(ts).map(r=>{const i=isIn(r),h=SORT=='d'&&r.d!=last?(last=r.d,`<div class=dh>${r.d}</div>`):'';return h+`<div class="ar2${r.id==LASTID?' nr':''}"><span class="ic${i?' in':''}">${ICO[r.t]}</span><div><b>${htm(lab(r))}${r.rec?' ↻':''}</b><small>${htm(nm(S.accs,r.acc))}${r.note?' · '+htm(r.note):''}</small></div><b class="am${i?' pos':''}">${r.t=='trf'?'':i?'+':'−'}${fm(Math.abs(r.a),r.c)}</b><button class=ib data-a=ed data-v=${r.id} aria-label=edit title="${_('تعديل|Edit')}">✎</button><button class=ib data-a=del data-v=${r.id} aria-label=del title="${_('حذف|Delete')}">✕</button></div>`}).join('')||`<p class=em>${_('لا توجد عمليات بعد|No transactions yet')}</p>`};
 const tbody=actList,table=ts=>`<div class=cd><div class=tl><input class=in placeholder="${_('بحث…|Search…')}" value="${Q}" oninput="Q=this.value;$('#tb').innerHTML=tbody(['${ts.join("','")}'])"><button class=bt data-a=csv data-v=${ts.join()}>CSV</button></div><div id=tb>${actList(ts)}</div></div>`;
 function toast(m){const e=document.createElement('div');e.className='ts';e.textContent=m;document.body.append(e);setTimeout(()=>e.remove(),2600)}
 const htm=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -822,7 +822,7 @@ PG.invest=()=>{
   '<div class=cd><div class=market-title><div><h4>'+_("الأصول الذهبية|Gold assets")+'</h4><small>'+_("عدّل بيانات الأصل أو احذفه نهائيًا مع عملياته عند التأكيد|Edit the asset or permanently delete it and its operations after confirmation")+"</small></div></div><div class=sc><table><thead><tr>"+headers+"</tr></thead><tbody>"+rows+"</tbody></table></div></div>"+
   '<div class=cd investment-history><div class=market-title><div><h4>'+_("سجل عمليات الاستثمار|Investment transaction history")+'</h4><small>'+_("يمكن تعديل الشراء أو البيع، أو حذفه مع عكس أثره على الأرصدة|Edit a purchase or sale, or delete it with the balance impact reversed")+"</small></div></div><div class=sc><table><thead><tr>"+["التاريخ|Date","الحركة|Movement","الأصل|Asset","الكمية|Quantity","المبلغ|Amount","الحساب|Account","الإجراءات|Actions"].map(h=>"<th>"+_(h)+"</th>").join("")+"</tr></thead><tbody>"+historyRows+"</tbody></table></div></div>";
 };
-PG.budgets=()=>`${hd('تحكم في الإنفاق|Control spending','حدد سقفًا لكل تصنيف وتابع الاستهلاك|Set a limit per category and watch usage',addb('bud','ميزانية جديدة|New budget'))}<div class="g c2">${S.bud.map(b=>{const l=cv(b.l,b.cur),s=spent(b),p=s/l*100,col=p>=90?'#c2453d':'var(--g)';return `<div class=cd><div class=ft><b>${htm(b.name||_(CAT[b.ci]))}</b><span class=bc>${_({m:'شهرية|Monthly',w:'أسبوعية|Weekly',y:'سنوية|Yearly'}[b.p])}</span></div><small class=bc>${htm(b.categoryName||_(CAT[b.ci]||''))}${b.accountId?' · '+htm(nm(S.accs,b.accountId)):''}</small><div style="position:relative">${pb(p,col,'fl')}${[50,75,90].map(t=>`<i style="position:absolute;top:-2px;inset-inline-start:${t}%;height:13px;width:1px;background:var(--mut)"></i>`).join('')}</div><div class=ft style="margin-top:6px"><span>${fm(s)} / ${fm(l)}</span><b style="color:${col}">${p.toFixed(0)}%</b></div><small class=bc>${_('المتبقي|Left')} ${fm(Math.max(0,l-s))}</small> <button class=ib data-a=db data-v=${b.id}>✕</button></div>`}).join('')}</div>`;
+PG.budgets=()=>`${hd('تحكم في الإنفاق|Control spending','حدد سقفًا لكل تصنيف وتابع الاستهلاك|Set a limit per category and watch usage',addb('bud','ميزانية جديدة|New budget'))}<div class="g c2">${S.bud.map(b=>{const l=cv(b.l,b.cur),s=spent(b),p=s/l*100,col=p>=90?'#c2453d':'var(--g)';return `<div class=cd><div class=ft><b>${htm(b.name||_(CAT[b.ci]))}</b><span class=bc>${_({m:'شهرية|Monthly',w:'أسبوعية|Weekly',y:'سنوية|Yearly'}[b.p])}</span></div><small class=bc>${htm(b.categoryName||_(CAT[b.ci]||''))}${b.accountId?' · '+htm(nm(S.accs,b.accountId)):''}</small><div style="position:relative">${pb(p,col,'fl')}${[50,75,90].map(t=>`<i style="position:absolute;top:-2px;inset-inline-start:${t}%;height:13px;width:1px;background:var(--mut)"></i>`).join('')}</div><div class=ft style="margin-top:6px"><span>${fm(s)} / ${fm(l)}</span><b style="color:${col}">${p.toFixed(0)}%</b></div><small class=bc>${_('المتبقي|Left')} ${fm(Math.max(0,l-s))}</small> <button class=ib data-a=ebud data-v=${b.id} title="${_('تعديل الميزانية|Edit budget')}">✎</button> <button class=ib data-a=db data-v=${b.id} title="${_('حذف الميزانية|Delete budget')}">✕</button></div>`}).join('')}</div>`;
 function reportRows(){const r=R,y=S.year,f=x=>(!r.c||x.c==r.c)&&(r.t=='sav'||!r.k||x.cat==r.k);const per=t=>{const a=Array(12).fill(0),n=Array(12).fill(0);S.tx.filter(x=>x.t==t&&+x.d.slice(0,4)==y&&f(x)).forEach(x=>{a[+x.d.slice(5,7)-1]+=B(x);n[+x.d.slice(5,7)-1]++});return[a,n]};
 const keep=i=>!+r.m||i==r.m-1;
 if(r.t=='cf'){const[I]=per('inc'),[E]=per('exp');return[[_('الشهر|Month'),_('الدخل|Income'),_('المصروفات|Expenses'),_('الصافي|Net')],...I.map((v,i)=>[MN(i),v,E[i],v-E[i]]).filter((_,i)=>keep(i))]}
@@ -1109,6 +1109,29 @@ async xa(id){
   }
   toast(_('تم حذف الحساب وحركاته المرتبطة نهائيًا.|Wallet and linked activity permanently deleted.'));
  }catch(e){toast(e.message||String(e));}
+},
+async ebud(id){
+ const b=S.bud.find(z=>String(z.id)===String(id));if(!b)return;
+ form(_('تعديل الميزانية|Edit budget'),[
+  ['name',_('اسم الميزانية|Budget name'),'text',,b.name||''],
+  ['categoryName',_('تصنيف المصروف|Expense category'),'text',,b.categoryName||_(CAT[b.ci]||'')],
+  ['l',_('الحد المالي|Limit'),'number',,b.l],
+  ['cur',_('العملة|Currency'),'s',CUR,b.cur],
+  ['accountId',_('الحساب المرتبط|Linked account'),'s',[['',_('كل الحسابات|All accounts')],...AO()],b.accountId||''],
+  ['p',_('الفترة|Period'),'s',[['m',_('شهرية|Monthly')],['w',_('أسبوعية|Weekly')],['y',_('سنوية|Yearly')]],b.p||'m']
+ ],async v=>{
+  const name=String(v.name||'').trim(),categoryName=String(v.categoryName||'').trim(),limit=Number(v.l);
+  if(!name||name.length>80||!(limit>0)||!Number.isFinite(limit)){toast(_('تحقق من اسم الميزانية والحد المالي.|Check the budget name and limit.'));return false;}
+  const category=await resolveFinanceCategory('expense',categoryName);
+  const next={...b,name,categoryName,categoryId:category.id,ci:category.index,l:limit,cur:v.cur,accountId:v.accountId||null,p:v.p};
+  if(CLOUD_USER){
+   const payload={user_id:CLOUD_USER.id,category_id:category.id,budget_name:name,account_id:next.accountId,amount:limit,currency_code:v.cur,...cloudBudgetPeriod(next)};
+   const {error}=await SB.from('budgets').update(payload).eq('id',id).eq('user_id',CLOUD_USER.id);
+   if(error)throw error;
+   await cloudRefresh();
+  }else Object.assign(b,next);
+  toast(_('تم تحديث الميزانية.|Budget updated.'));return true;
+ })
 },
 async db(id){
  if(!confirm(_('حذف هذه الميزانية؟ لن يتم حذف أي معاملة مالية.|Delete this budget? No financial transaction will be deleted.')))return;
