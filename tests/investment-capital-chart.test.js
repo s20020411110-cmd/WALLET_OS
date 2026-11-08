@@ -48,16 +48,26 @@ test('investment page exposes transaction editing and reversal deletion beside t
   assert.match(html, /SB\.rpc\('edit_financial_transaction'/);
 });
 
-test('investment edits and purchase deletion validate all later sales against the recalculated quantity', () => {
+test('investment edits and permanent deletion validate dependencies before removing the ledger records', () => {
   assert.match(html, /function investmentLedgerValidAfterEdit\(assetId,transactionId,replacement\)/);
   assert.match(html, /investmentLedgerValidAfterEdit\(r\.ref,r\.id,next\)/);
   assert.match(html, /investmentLedgerValidAfterEdit\(r\.ref,r\.id,null\)/);
-  assert.match(html, /This purchase is required by later sales/);
+  assert.match(html, /This purchase cannot be deleted because later sales depend on it/);
+  assert.match(html, /mode==='delete_transaction'/);
+  assert.match(html, /mode==='delete_asset'/);
+  assert.match(html, /SB\.rpc\('delete_investment_data'/);
+  assert.match(html, /Permanently delete this asset/);
+  assert.match(html, /Permanently delete this investment operation/);
 });
 
-test('asset archive and restore work in local mode while cloud actions use the owner-scoped management RPC', () => {
-  assert.match(html, /a\.archived=true;save\(\);build\(\);toast/);
-  assert.match(html, /else\{a\.archived=false;save\(\);build\(\);toast/);
-  assert.match(html, /cloudManageItem\('investment',id,'archive'/);
-  assert.match(html, /cloudManageItem\('investment',id,'restore'/);
+test('investment assets provide edit and permanent delete only, with no archive or restore controls', () => {
+  assert.match(investmentPage, /data-a=ip data-v=/);
+  assert.match(investmentPage, /data-a=di data-v=/);
+  assert.doesNotMatch(investmentPage, /restoreInvestment|أرشفة الأصل|Archive asset|مؤرشف\|Archived/);
+  assert.doesNotMatch(html, /restoreInvestment\(id\)/);
+  assert.match(html, /purgeInvestmentLocalCopies/);
+  assert.match(html, /wos_pre_cloud_backup_/);
+  assert.match(html, /cloudInvestmentMutation\('update'/);
+  assert.match(html, /cloudInvestmentMutation\('delete_asset'/);
+  assert.match(html, /else purgeInvestmentLocalCopies\(\[id\],\[\],null\)/);
 });
