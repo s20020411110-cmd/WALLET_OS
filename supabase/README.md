@@ -20,8 +20,16 @@ This is a dedicated project for WALLET OS. It is not the Supabase project used b
 | 20261107153651 | wallet_os_wallet_types_v1 | Adds the savings wallet type used by the application |
 | 20261107155054 | wallet_os_gold_subtypes_v1 | Persists the gold item subtype used by the investment UI |
 | 20261107173757 | wallet_os_sync_integrity_hardening_v1 | Composite unique key for budget upserts, unique per-user request keys, serialized goal/loan creation retries |
+| 20261108031600 | personal_wallet_transaction_corrections_v1 | Audited transaction reversal and replacement editing workflow |
+| 20261108033136 | wallet_os_budget_names_and_account_links_v1 | Custom budget names and owner-validated account links |
+| 20261108033953 | wallet_os_cloud_management_actions_v1 | Cloud metadata management actions through dedicated RPCs |
+| 20261108034311 | wallet_os_cloud_management_security_hardening_v1 | Hardened owner checks and cloud management permissions |
+| 20261108040613 | wallet_os_permanent_investment_deletion_v1 | Atomic permanent deletion of investment assets and linked history |
+| 20261108041330 | wallet_os_transaction_correction_link_indexes_v1 | Indexes for transaction correction/reversal relationships |
+| 20261108045807 | wallet_os_transaction_rpc_invoker_hardening_v1 | Public transaction edit/void wrappers changed to SECURITY INVOKER |
+| 20261108051315 | wallet_os_duplicate_request_indexes_cleanup_v1 | Removed four identical redundant request-key indexes |
 
-All six migrations are visible in the hosted Supabase migration history. Their exact SQL has not yet been exported into this repository as local files under supabase/migrations/. Preserve the hosted migration history as the source of truth; before future local schema work, pull/export the hosted migration SQL using the Supabase CLI, review it against the hosted schema, and commit the exact exported SQL rather than reconstructing migration files from this guide.
+The first six migrations remain recorded in the hosted Supabase migration history; the eight later hardening/correction migrations above are tracked as SQL files in this repository. The exact SQL for the original core schema migrations has not yet been exported into supabase/migrations/. Preserve hosted history as the source of truth and export/review the original SQL before future local schema work rather than reconstructing it from this guide.
 
 ## Data model
 
@@ -95,9 +103,8 @@ A transaction-scoped integration test with temporary synthetic Auth identities w
 
 Successful test summary: 11 posted transactions, 11 journal entries, 24 journal lines; base-currency debits equalled credits. The enclosing test transaction was rolled back, leaving no test users or test finance records behind.
 
-Post-change Supabase Security Advisor: no findings.
-Post-change Performance Advisor: informational unused-index notices remain on the empty database; the earlier unindexed-foreign-key findings were addressed. The budget composite upsert conflict target was checked with EXPLAIN and lists the expected unique arbiter index.
-Post-change Health Advisor: no findings.
+Current Supabase Security Advisor: the only remaining warning is auth_leaked_password_protection (leaked-password checks disabled). This is a project-level Supabase Auth setting, not a database table setting; enable it in Authentication → Password Security when the project plan supports it. The connected database tools do not expose this Auth configuration action.
+Current Performance Advisor: all four duplicate_index warnings were removed by wallet_os_duplicate_request_indexes_cleanup_v1. Informational unused_index notices remain; do not drop those indexes until representative workload/query-plan evidence shows they are unnecessary. The project has limited usage history, so these counters are not sufficient to justify further index removal.
 
 The sync-integrity hardening migration was verified by reading back all four new unique indexes and checking that goal/loan v2 creation functions contain the owner-scoped advisory lock. A follow-up full Auth-backed integration SQL test was not completed in the final pass because the database execution gateway blocked the long test request; the prior rollback-only ledger integration test remains the successful full-posting test evidence.
 
@@ -139,24 +146,35 @@ Add that same origin (and any custom production domain later adopted) to the all
 - Users should retain the local browser profile/safety copy until they have reconciled the imported balances and transaction history.
 
 ### UI boundaries
-- Cloud journal entries are immutable through the old edit/delete controls. They are hidden/blocked for cloud accounts; an accounting correction workflow is required for changes.
-- Some metadata management actions (such as renaming/removing already-synced cloud entities) remain disabled until dedicated audited update/archive RPCs are added.
-- Market quote persistence/ingestion for the FX and gold quote tables is not yet wired to the existing client-side market feeds.
+- Cloud transaction edits use an audited reversal-and-replacement flow; cloud deletions use the owner-scoped audited void RPC. Both require explicit confirmation in the UI.
+- Gold/investment asset deletion is a dedicated permanent-delete workflow that removes linked investment history atomically; the gold page does not offer archive/restore actions.
+- Loan, goal, account and budget metadata changes route through dedicated cloud-management RPCs rather than the former cloud-blocked message.
+- Market quote persistence/ingestion for the FX and gold quote tables is not yet wired to Supabase; current prices continue through the app's API paths.
 
 ### Deployment status
 - Repository: `s20020411110-cmd/WALLET_OS`, branch `main`; linked to the separate Vercel project `wallet-os`.
 - Stable production URL: https://wallet-os-s20020411110-8096.vercel.app
-- Production deploys are served without Vercel SSO; preview deployments remain SSO-protected.
-- Latest verified application-code deployment: `dpl_GTS21DN7yacFL7snDVdFf9HSEMoK`, state `READY`, source commit `7858b5a065a14db1e057bf175582deb94ae7ae8c`.
-- The subsequent documentation-only production deployment `dpl_97DSQB4fGMiUvkzGBozRChAnCTHS` is also `READY` for commit `63152df03851a7c1020475541055d20e71e4f8da`.
-- The stable production URL returned HTTP 200 and served the Supabase SDK, publishable-key client, cloud CRUD RPC calls, financial posting RPC, and gold subtype mapping.
-- GitHub Actions integration tests completed successfully for application commit `7858b5a065a14db1e057bf175582deb94ae7ae8c` (run `42388516240`) and documentation commit `63152df03851a7c1020475541055d20e71e4f8da` (run `42388605292`).
+- Production deployment is intentionally deferred during the current QA/fix pass; no deployment, rollback, or Vercel project-setting change is part of this work.
+- Last verified production deployment at the prior QA checkpoint was source commit `53863bc3a2b0008c89f3886c6a61e41935939d51`. Current `main` is newer; do not treat the latest source fixes as live until a later deployment is permitted and verified.
 
 ## Remaining integration work
 
 - In Supabase Dashboard → Authentication → URL Configuration, set Site URL to `https://wallet-os-s20020411110-8096.vercel.app` and add this origin to allowed Redirect URLs. The Auth configuration cannot be updated by the currently connected Supabase tools.
+- Enable Leaked Password Protection in Authentication → Password Security (HaveIBeenPwned/Pwned Passwords check). Supabase documents this as a Pro-plan-and-above feature; the current connected tools cannot change project Auth configuration. Re-run the Security Advisor after enabling it.
 - Verify an actual user sign-up/sign-in through the deployed URL after the redirect allowlist is configured, including email-confirmation behavior.
 - Verify a representative local-data import against a real user account and reconcile opening balances before removing or archiving the device copy.
 - Build audited update/archive RPCs for cloud entity metadata and a correction/reversal workflow for posted transactions.
 - Add trusted server-side ingestion for the exchange-rate and gold-quote tables; the app currently continues to fetch/retain market quotes through its existing browser/API path.
 - Validate the production project's access-protection and domain settings with the intended users.
+
+## QA and integrity follow-up — 2026-11-08
+
+- GitHub Actions latest verified application test run at the last full app/Android source checkpoint: 42449266874, with 64/64 tests passed; Android Debug APK run 42449266896 completed artifact verification and upload. Later repository-only QA/test changes are tracked separately and must re-run CI before merge.
+- Application regression tests include actual helper execution for a synthetic multi-currency ledger scenario: transfers, savings deposit/withdrawal, borrowed and receivable debt payments, archived liability inclusion in gross assets, and a partial investment sale with weighted-average cost.
+- HTML escaping regression coverage checks form values, profile fields, CSV preview, recent transactions, and the final alert renderer. Loan/goal alert text is escaped at the final HTML sink.
+- Supabase currently reports 16/16 public tables with RLS enabled and FORCE RLS enabled. Public/anonymous roles have no direct financial-table SELECT access. Both financial summary views use security_invoker=true.
+- No public SECURITY DEFINER routines remain. User-callable privileged financial routines are in private, set an empty search_path, and do not grant execution to anon. The public transaction edit/void wrappers are SECURITY INVOKER.
+- Four identical standalone unique indexes were removed; the original per-user unique indexes remain. The Performance Advisor no longer reports duplicate indexes. Informational unused-index notices remain for later workload-based review.
+- A read-only integrity pass found no unbalanced journal entries, transactions missing journal postings, journal entries without lines, investment trades missing transaction links, or invalid open investment quantities at the time checked. No real financial records were inserted, edited, or deleted for tests.
+- The Supabase Security Advisor still reports one external Auth setting warning: leaked-password protection is disabled. This project-level Auth setting must be enabled in the Supabase Dashboard (and may require Pro plan or above); it cannot be changed by ordinary Postgres SQL through the connected tools.
+- No production deployment was performed as part of this QA follow-up.
