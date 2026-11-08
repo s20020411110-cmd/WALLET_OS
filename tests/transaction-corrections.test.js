@@ -241,6 +241,14 @@ test('permanent deletion migration is owner-scoped and removes journal and corre
   assert.match(migration,/grant execute on function public\.delete_financial_item[\s\S]*to authenticated/i);
 });
 
+test('legacy cloud management RPC rejects archive and restore actions', () => {
+  const migration=fs.readFileSync(path.join(__dirname,'..','supabase','wallet_os_disable_archive_management_actions_v1.sql'),'utf8');
+  assert.match(migration,/if p_action not in \('update','pause'\) then raise exception 'Unsupported action'/i);
+  assert.doesNotMatch(migration,/if p_action not in \('update','archive','restore','pause','delete'\)/i);
+  assert.match(migration,/alter function public\.manage_financial_item\(text,uuid,text,jsonb\) security invoker/i);
+  assert.match(migration,/revoke all on function public\.manage_financial_item[\s\S]*from public,anon/i);
+});
+
 test('archive workflow removal migration changes only rows owned by the signed-in user', () => {
   const migration=fs.readFileSync(path.join(__dirname,'..','supabase','wallet_os_remove_archive_semantics_v1.sql'),'utf8');
   assert.match(migration,/create or replace function private\.activate_owned_financial_records_impl/i);
