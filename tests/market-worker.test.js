@@ -239,6 +239,7 @@ test('gold snapshot write is throttled and only targets the market quote table',
       return { ok: true, status: 201, text: async () => '' };
     }
   });
+  worker.persistSnapshot = GoldMarketWorker.prototype.persistSnapshot.bind(worker);
   const quote = normalizeTwelveDataPrice(tdTick(), { now: NOW });
   assert.equal(await worker.persistSnapshot(quote, true), true);
   assert.equal(await worker.persistSnapshot(quote, false), false);
@@ -260,6 +261,7 @@ test('Realtime broadcast uses private JSON event endpoint and unwrapped payload'
       return { ok: true, status: 200, text: async () => '{}' };
     }
   });
+  worker.broadcast = GoldMarketWorker.prototype.broadcast.bind(worker);
   const payload = { instrument: 'XAU/USD', price_usd_oz: 2750.5 };
   assert.equal(await worker.broadcast('price', payload), true);
   assert.match(calls[0].url, /\/realtime\/v1\/api\/broadcast\/wallet-os-gold-market\/events\/price\?private=true$/);
@@ -295,7 +297,7 @@ test('worker snapshot and posting logic never mutates financial transaction endp
 });
 
 test('Vercel fallback returns stale/unavailable status instead of fabricating or zero-filling', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', '..', 'api', 'gold-price.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'api', 'gold-price.js'), 'utf8');
   assert.match(source, /Cache-Control', 'no-store/);
   assert.match(source, /providerState === 'fresh'/);
   assert.match(source, /return json\(res, 503/);
