@@ -1115,7 +1115,7 @@ let GOLD_DAILY_TRY=0;
 async function refreshGoldDailyCandles(force){
  const now=Date.now(),savedAt=Date.parse(S.gold&&S.gold.dailyFetchedAt||'')||0;
  if(!force&&GOLD_DAILY_TRY&&now-GOLD_DAILY_TRY<900000)return false;
- if(!force&&savedAt&&now-savedAt<21600000)return false;
+ if(!force&&savedAt&&now-savedAt<900000)return false;
  GOLD_DAILY_TRY=now;
  try{
   const payload=await jf('https://xaus.com/api/v1/chart?symbol=xau&range=3mo&interval=1d');
@@ -1134,14 +1134,11 @@ async function live(man){
  let ch=0,gold=null;
  refreshGoldDailyCandles(!!man).catch(()=>{});
  try{
-  const x=await jf('https://xaus.com/api/v1/spot?currency=USD&unit=gram&compact=1');
-  const oz=Number(x&&x.spot_usd_oz),gram=Number(x&&(x.per_gram_usd||(x.xau&&x.xau.price)));
-  const rawState=x&&x.data_state&&x.data_state.status||'unavailable',stamp=x&&(x.price_as_of||(x.data_state&&x.data_state.as_of)||x.updated_at),age=stamp?Date.now()-Date.parse(stamp):Infinity,state=rawState==='fresh'&&Number.isFinite(age)&&age>180000?'stale':rawState;
-  if(oz>0&&gram>0&&state!=='unavailable')gold={oz,gram,state,stamp:stamp||new Date().toISOString(),source:'xaus'};
- }catch(e){}
- if(!gold)try{
-  const x=await jf('https://api.gold-api.com/price/XAU'),oz=Number(x&&x.price);
-  if(oz>0){const stamp=x.updatedAt||x.updated_at||null,age=stamp?Date.now()-Date.parse(stamp):Infinity;gold={oz,gram:oz/OZ,state:stamp&&Number.isFinite(age)&&age>=-30000&&age<=120000?'fresh':'stale',stamp:stamp||new Date().toISOString(),source:'gold-api'}}
+  const x=await jf(WALLET_OS_API_ORIGIN+'/api/gold-price');
+  const oz=Number(x&&x.price_usd_oz),gram=Number(x&&x.price_usd_gram),stamp=x&&x.price_as_of;
+  const age=stamp?Date.now()-Date.parse(stamp):Infinity;
+  if(x&&x.ok&&oz>0&&gram>0&&Number.isFinite(age)&&age>=-30000&&age<=180000)
+   gold={oz,gram,state:'fresh',stamp,source:x.source||'server',fetchedAt:x.fetched_at};
  }catch(e){}
  if(gold){
   const old=S.gold.usd;
