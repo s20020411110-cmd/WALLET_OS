@@ -378,7 +378,7 @@ test('gold page keeps one P/L chart and omits extra gold analysis panels', () =>
   assert.ok(page.includes('portfolioPLChart(A)'));
   assert.ok(page.includes('الربح والخسارة|Profit & loss'));
   assert.ok(!page.includes('توزيع الذهب|Gold allocation'));
-  assert.ok(!page.includes('goldHeroCard(g)'));
+  assert.ok(page.includes('goldHeroCard(g)'));\n  assert.ok(page.includes('goldTrendChart(g)'));
   assert.ok(!page.includes('goldKaratStrip(g)'));
   assert.ok(!page.includes('donut(by)'));
   assert.ok(html.includes('const unrealized=p.v-p.c,total=unrealized+p.pl'));
