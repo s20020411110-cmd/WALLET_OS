@@ -62,6 +62,19 @@ test('home dashboard separates seven categories and uses correct asset/income ra
   assert.doesNotMatch(home, /wallet-spark|income & expenses|debts & loans|class=tcs/);
 });
 
+test('savings report calculates the monthly savings rate as net savings divided by income', () => {
+  const reportStart = html.indexOf('function reportRows(){');
+  const reportEnd = html.indexOf('\nPG.reports=', reportStart);
+  const report = html.slice(reportStart, reportEnd);
+  assert.ok(reportStart >= 0 && reportEnd > reportStart, 'report calculations should exist');
+  assert.match(report, /if\(r\.t=='sav'\)/);
+  assert.match(report, /const\[savings\]=per\('sav'\),\[income\]=per\('inc'\)/);
+  assert.match(report, /v\/income\[i\]\*100/);
+  assert.match(report, /Net savings/);
+  assert.match(report, /Savings rate/);
+  assert.match(html, /R\.t==='sav'\?'':sel\('k'/);
+});
+
 test('home wealth cards use separate semantic gradients blended with the selected theme', () => {
   assert.match(html, /\.wallet-accounts\{--wallet-accent:/);
   assert.match(html, /\.wallet-income\{--wallet-accent:/);
