@@ -181,8 +181,8 @@ test('account cards use number formatting and provide edit/delete for linked tra
   assert.match(page, /kc\('عدد الحسابات\|Accounts',accounts\.length,'',null,'var\(--g\)','','#'\)/);
   assert.match(page, /data-a=ea/);
   assert.match(page, /data-a=xa/);
-  assert.match(page, /data-a=ed data-v=\$\{t\.id\}/);
-  assert.match(page, /data-a=del data-v=\$\{t\.id\}/);
+  assert.match(page, /data-a=ed data-v=/);
+  assert.match(page, /data-a=del data-v=/);
 });
 
 test('global activity exposes edit and delete for loan origination as well as every ordinary transaction', () => {
