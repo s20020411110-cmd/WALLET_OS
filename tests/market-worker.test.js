@@ -288,7 +288,7 @@ test('frontend contains no worker or Twelve Data secret and no one-second price 
 });
 
 test('worker snapshot and posting logic never mutates financial transaction endpoints', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', '..', 'market-worker', 'worker.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'market-worker', 'worker.js'), 'utf8');
   assert.match(source, /\/rest\/v1\/gold_price_quotes/);
   assert.doesNotMatch(source, /\/rest\/v1\/transactions|post_financial_transaction|journal_entries|journal_lines/);
   assert.match(source, /snapshotIntervalMs/);
