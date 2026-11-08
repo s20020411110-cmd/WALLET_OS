@@ -9,36 +9,64 @@ const pageStart = html.indexOf('PG.invest=()=>');
 const pageEnd = html.indexOf('PG.budgets=()=>', pageStart);
 const investmentPage = html.slice(pageStart, pageEnd);
 
-test('investment page combines portfolio P/L and gold distribution without duplicate charts', () => {
-  assert.ok(pageStart >= 0 && pageEnd > pageStart, 'investment page should exist');
-  assert.match(investmentPage, /رأس المال المستثمر والربح والخسارة حسب الأصل\|Invested capital and profit\/loss by asset/);
-  assert.equal(investmentPage.split('portfolioPLChart(A)').length - 1, 1);
-  assert.match(investmentPage, /توزيع الذهب\|Gold allocation/);
-  assert.doesNotMatch(investmentPage, /حركة الذهب في البورصة العالمية\|Global gold market movement/);
+test('gold page shows only a clear profit/loss summary and one line chart', () => {
+  assert.ok(pageStart >= 0 && pageEnd > pageStart, 'gold page should exist');
+  assert.match(investmentPage, /portfolioPLChart\(A\)/);
+  assert.match(investmentPage, /الربح والخسارة\|Profit & loss/);
+  assert.doesNotMatch(investmentPage, /goldHeroCard\(g\)|goldKaratStrip\(g\)|donut\(by\)|investment-insights/);
+  assert.doesNotMatch(investmentPage, /رأس المال المستثمر والربح والخسارة حسب الأصل|توزيع الذهب\|Gold allocation/);
 });
 
-test('capital comparison chart shows invested amount, current value and total P/L', () => {
-  assert.match(html, /invested:cv\(Number\(p\.c\|\|0\)/);
-  assert.match(html, /current:cv\(Number\(p\.v\|\|0\)/);
-  assert.match(html, /إجمالي المبالغ المستثمرة\|Total invested capital/);
-  assert.match(html, /القيمة الحالية للاستثمارات\|Current investment value/);
-  assert.match(html, /الربح\/الخسارة الكلي · شامل المحقق\|Total P\/L · including realized/);
+test('profit/loss chart calculates positive profit and negative loss only', () => {
+  const chartStart = html.indexOf('const portfolioPLChart=assets=>{');
+  const chartEnd = html.indexOf('\n};\n\nconst goldKaratStrip', chartStart);
+  const chart = html.slice(chartStart, chartEnd);
+  assert.ok(chartStart >= 0 && chartEnd > chartStart, 'P/L chart helper should exist');
+  assert.match(chart, /profit=rows\.reduce/);
+  assert.match(chart, /loss=rows\.reduce/);
+  assert.match(chart, /portfolio-pl-chart/);
+  assert.match(chart, /pl-zero-line/);
+  assert.match(chart, /row\.total/);
+  assert.doesNotMatch(chart, /invested capital|current investment value|realized|unrealized/);
 });
 
-test('portfolio chart explains that it is not a global gold price chart', () => {
-  assert.match(html, /لا يعرض سعر الذهب العالمي أو حركة XAU\/USD/);
+test('profit/loss chart is a single responsive line with gain/loss markers', () => {
+  assert.match(html, /portfolio-pl-line/);
+  assert.match(html, /portfolio-pl-point\.profit/);
+  assert.match(html, /portfolio-pl-point\.loss/);
+  assert.match(html, /portfolio-pl-summary/);
+  assert.match(html, /grid-template-columns:1fr 1fr;gap:12px/);
+  assert.doesNotMatch(html, /capital-series-invested|capital-series-current/);
 });
 
-
-test('portfolio comparison is a smooth animated interactive line chart', () => {
-  assert.match(html, /capital-series-invested/);
-  assert.match(html, /capital-series-current/);
-  assert.match(html, /capitalLineDraw/);
-  assert.match(html, /capital-selection-metrics/);
-  assert.ok(html.includes('data-a=\\"capitalPoint\\"'));
-  assert.match(html, /capitalPoint\(v\)\{CAP_SELECTED=/);
+test('home dashboard separates seven categories and calculates their ratio against net wealth', () => {
+  const homeStart = html.indexOf('PG.home=()=>');
+  const homeEnd = html.indexOf('const hl=()=>', homeStart);
+  const home = html.slice(homeStart, homeEnd);
+  for (const key of ['accounts', 'income', 'expenses', 'investment', 'debts', 'loans', 'savings']) {
+    assert.match(home, new RegExp("card\\('" + key + "'"));
+    assert.match(home, new RegExp('wallet-' + key));
+  }
+  assert.match(home, /wealth=NW\(\)/);
+  assert.match(home, /Math\.abs\(Number\(value\)\|\|0\)\/wealth\*100/);
+  assert.match(home, /I\[c\].*Income this month/);
+  assert.match(home, /E\[c\].*Expenses this month/);
+  assert.match(home, /Z\(OW\(\)\.map\(rem\)\)/);
+  assert.match(home, /Z\(LN\(\)\.map\(rem\)\)/);
+  assert.doesNotMatch(home, /wallet-spark|income & expenses|debts & loans|class=tcs/);
 });
 
+test('home wealth cards use separate semantic gradients blended with the selected theme', () => {
+  assert.match(html, /\.wallet-accounts\{--wallet-accent:/);
+  assert.match(html, /\.wallet-income\{--wallet-accent:/);
+  assert.match(html, /\.wallet-expenses\{--wallet-accent:/);
+  assert.match(html, /\.wallet-investment\{--wallet-accent:/);
+  assert.match(html, /\.wallet-debts\{--wallet-accent:/);
+  assert.match(html, /\.wallet-loans\{--wallet-accent:/);
+  assert.match(html, /\.wallet-savings\{--wallet-accent:/);
+  assert.match(html, /color-mix\(in srgb,var\(--wallet-tone\) 17%,var\(--c\)\)/);
+  assert.match(html, /linear-gradient\(90deg,var\(--wallet-tone\),var\(--g2\)\)/);
+});
 test('investment page exposes transaction editing and reversal deletion beside the asset list', () => {
   assert.match(investmentPage, /investment-history/);
   assert.match(investmentPage, /data-a=ed data-v=/);
