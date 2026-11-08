@@ -176,3 +176,6 @@ node --test tests/market-worker.test.js tests/gold-price-api.test.js
 ```
 
 These tests use mocked provider data. They validate message parsing, ounce/gram conversion, freshness, duplicate/out-of-order suppression, subscription acknowledgement, fallback ordering, reconnection backoff, snapshot throttling, private Broadcast payload shape and no financial-ledger writes. They do not establish that a Twelve Data credential or a production WebSocket session is active.
+
+
+For planning only, Twelve Data's current Business pricing page lists Venture at $499/month on monthly billing or $4,990/year (equivalent to $414/month on annual billing), with 2,500 WS credits on the displayed tier. The personal Pro individual plan currently lists 500+ WS credits depending on the selected tier, but it is not a substitute for business display/redistribution rights. Confirm the exact quote, exchange terms and XAU/USD entitlement with Twelve Data sales before purchase; pricing and licensing can change. One shared XAU/USD subscription consumes one WS credit, not one per WALLET OS user. Sources: https://twelvedata.com/pricing-business and https://support.twelvedata.com/en/articles/5332349-commercial-and-personal-usage.
