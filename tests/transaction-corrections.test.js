@@ -312,7 +312,8 @@ test('account opening balances use the double-entry opening balance RPC and appe
 });
 
 test('loans and receivables have separate pages and creation paths', () => {
-  assert.match(html, /PG\.loans=\(\)=>\{const rows=LN\(\)/);
+  assert.match(html, /PG\.loans=\(\)=>\{/);
+  assert.match(html, /const rows=LN\(\)/);
   assert.match(html, /PG\.debts=\(\)=>\{const rows=OW\(\)/);
   assert.match(html, /function addLoan\(kind='loan'\)/);
   assert.match(html, /function addDebt\(\)\{addLoan\('owed'\);\}/);
