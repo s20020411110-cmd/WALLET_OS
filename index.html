@@ -842,7 +842,27 @@ PG.loans=()=>{
   '<div class=ft><h3>'+_('القروض|Loans')+'</h3><span class=bc>'+rows.length+'</span></div>'+
   '<div class="g c2">'+(rows.map(l=>loanCardHtml(l,false)).join('')||'<p class=em>'+_('لا توجد قروض. أضف أي مبلغ اقترضته ليظهر التزامه هنا.|No loans yet. Add borrowed money to track the liability here.')+'</p>')+'</div>';
 };
-PG.debts=()=>{const rows=OW(),total=Z(rows.map(l=>cv(l.orig,l.cur))),remaining=Z(rows.map(rem)),collected=Z(rows.map(l=>cv(l.orig,l.cur)-rem(l))),upcoming=rows.filter(l=>rem(l)>0&&l.due).sort((a,b)=>a.due.localeCompare(b.due));return hd('الديون المستحقة لك|Money owed to you','سجّل الأموال التي أقرضتها للآخرين أو المبالغ التي تنتظر تحصيلها، وتابع ما تم استلامه والمتبقي|Track money others owe you, payments received and outstanding receivables',addb('debt','إضافة دين مستحق لك|Add receivable'))+`<div class="g k">${kc('إجمالي المستحقات|Total receivables',total,'')}${kc('المتبقي للتحصيل|Outstanding',remaining,'')}${kc('إجمالي المحصّل|Total collected',collected,'')}${kc('عدد الجهات|People / entities',rows.length,'')}</div><div class=cd><h4>${_('مواعيد التحصيل|Collection dates')}</h4>${upcoming.map(l=>`<div class=row><span>${htm(l.n)} · ${l.due}</span><b>${fm(l.inst||0,l.cur)}</b></div>`).join('')||`<p class=em>${_('لا توجد مواعيد تحصيل قادمة|No upcoming collection dates')}</p>`}</div><div class=ft><h3>${_('الديون النشطة|Active receivables')}</h3><span class=bc>${rows.filter(l=>rem(l)>0).length}</span></div><div class="g c2">${rows.map(l=>loanCardHtml(l,true)).join('')||`<p class=em>${_('لا توجد ديون مستحقة لك. أضف مبلغًا لك عند شخص أو جهة لتبدأ المتابعة.|No receivables yet. Add money owed to you to start tracking collections.')}</p>`}</div>};
+PG.debts=()=>{
+ const rows=OW();
+ const total=Z(rows.map(l=>cv(l.orig,l.cur)));
+ const remaining=Z(rows.map(rem));
+ const collected=Z(rows.map(l=>cv(l.orig,l.cur)-rem(l)));
+ const upcoming=rows.filter(l=>rem(l)>0&&l.due).sort((a,b)=>a.due.localeCompare(b.due));
+ const upcomingRows=upcoming.map(l=>'<div class=row><span>'+htm(l.n)+' · '+htm(l.due)+'</span><b>'+fm(l.inst||0,l.cur)+'</b></div>').join('');
+ const cards=rows.map(l=>loanCardHtml(l,true)).join('');
+ return hd('الديون المستحقة لك|Money owed to you','تابع الأموال التي أقرضتها للآخرين أو المبالغ التي تنتظر تحصيلها، وعدّل أو احذف السجلات وعمليات التحصيل مباشرة|Track money owed to you, and edit or permanently delete receivable and collection records',addb('debt','إضافة دين مستحق لك|Add receivable'))+
+  '<div class="g k">'+
+   kc('إجمالي المستحقات|Total receivables',total,'')+
+   kc('المتبقي للتحصيل|Outstanding',remaining,'')+
+   kc('إجمالي المحصّل|Total collected',collected,'')+
+   kc('عدد الجهات|People / entities',rows.length,'',null,'var(--g)','','#')+
+  '</div>'+
+  '<div class=cd><h4>'+_('مواعيد التحصيل|Collection dates')+'</h4>'+
+   (upcomingRows||'<p class=em>'+_('لا توجد مواعيد تحصيل قادمة|No upcoming collection dates')+'</p>')+
+  '</div>'+
+  '<div class=ft><h3>'+_('الديون المستحقة لك|Receivables')+'</h3><span class=bc>'+rows.filter(l=>rem(l)>0).length+'</span></div>'+
+  '<div class="g c2">'+(cards||'<p class=em>'+_('لا توجد ديون مستحقة لك. أضف مبلغًا لك عند شخص أو جهة لتبدأ المتابعة.|No receivables yet. Add money owed to you to start tracking collections.')+'</p>')+'</div>';
+};
 PG.savings=()=>{const m=mon('sav'),I=mon('inc'),c=cm(),gr=Array.from({length:12},(_,i)=>upto('sav',i)),rate=m.map((v,i)=>I[i]?v/I[i]*100:0),done=S.goals.filter(g=>sv(g)>=cv(g.target,g.cur)).length,r3=Z(m.slice(Math.max(0,c-2),c+1))/3;
 const card=g=>{const t=cv(g.target,g.cur),s=sv(g),p=s/t*100,left=Math.max(0,t-s),eta=left&&r3>0?new Date(NOW.getFullYear(),NOW.getMonth()+Math.ceil(left/r3),1).toLocaleDateString(LOC(),{month:'short',year:'numeric'}):'—';return `<div class="cd ${g.stop?'off':''}"><div class=dn2>${ring(p,'var(--gd)')}<div style="flex:1"><b>${htm(g.n)}</b><div class=bc>${fm(s)} / ${fm(t)}</div><div class=bc>${_('المتبقي|Left')} ${fm(left)} · ${_('الوصول|ETA')} ${eta}</div><div class=bc>${_('معدل شهري|Monthly')} ${fm(r3)}</div></div></div><div class=goalp><i style="flex:${Math.max(1,Math.min(99,p))};background:var(--g)">${p.toFixed(0)}%</i><i style="flex:${100-Math.max(1,Math.min(99,p))}">${Math.max(0,100-p).toFixed(0)}%</i></div><div class=cht style="margin-top:8px"><button class="bt pr" data-a=gadd data-v=${g.id}>＋</button><button class=bt data-a=gwd data-v=${g.id}>−</button><button class=bt data-a=gst data-v=${g.id}>${g.stop?_('استئناف|Resume'):_('إيقاف|Pause')}</button><button class=bt data-a=eg data-v=${g.id}>✎</button><button class=bt data-a=dg data-v=${g.id}>${_('حذف|Delete')}</button></div>${(h=>h.length?`<details><summary class=bc>${_('السجل|History')}</summary>${h.map(x=>`<div class=row>${x.d}<b>${fm(x.a,x.c)}</b><button class=ib data-a=ed data-v=${x.id} title="${_('تعديل|Edit')}">✎</button><button class=ib data-a=del data-v=${x.id} title="${_('حذف|Delete')}">✕</button></div>`).join('')}</details>`:'')(S.tx.filter(x=>x.t=='sav'&&x.ref==g.id).sort((a,b)=>b.d.localeCompare(a.d)))}</div>`};
 return hd('بناء الثروة والأهداف|Wealth & goals','املأ أهدافك دائرة بعد دائرة|Fill your goals, one ring at a time',addb('goal','هدف جديد|New goal'))+`<div class="g k">${kc('إجمالي المدخرات|Total saved',savT(),'',gr,'var(--gd)')}${kc('مدخرات الشهر|This month',m[c],'',m,'var(--gd)')}${kc('نسبة الادخار|Saving rate',I[c]?m[c]/I[c]*100:0,'',null,'#a0a4ad','','%')}</div>
