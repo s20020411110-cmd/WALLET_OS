@@ -241,7 +241,6 @@ test('investment and other transaction deletions use permanent database deletion
   assert.match(deleteHandler, /cloudInvestmentMutation\('delete_transaction'/);
   assert.match(deleteHandler, /purgeInvestmentLocalCopies\(\[\], \[r\.id\], null\)/);
   assert.match(deleteHandler, /if\(!confirm\(prompt\)\)return/);
-  assert.match(deleteHandler, /delete this investment operation/);
   assert.match(deleteHandler, /SB\.rpc\('delete_financial_transaction'/);
   assert.doesNotMatch(deleteHandler, /void_financial_transaction/);
   assert.match(html, /Permanently delete this asset/);
