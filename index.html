@@ -1285,6 +1285,95 @@ async function cloudManageItem(entity,id,action,payload={}){
  await cloudRefresh();
  return data;
 }
+function purgeInvestmentLocalCopies(assetIds=[],transactionIds=[],userId=null){
+ const assets=new Set(assetIds.map(String)),transactions=new Set(transactionIds.map(String));
+ const relatedTransaction=tx=>(['buy','sell'].includes(tx.t)&&assets.has(String(tx.ref)))||transactions.has(String(tx.id));
+ if(assets.size)S.inv=(S.inv||[]).filter(a=>!assets.has(String(a.id)));
+ S.tx=(S.tx||[]).filter(tx=>!relatedTransaction(tx));
+ if(userId){
+  const prefix='wos_pre_cloud_backup_'+userId+'_';
+  try{
+   for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(!key||!key.startsWith(prefix))continue;
+    try{
+     const snapshot=JSON.parse(localStorage.getItem(key)||'null');
+     if(!snapshot||typeof snapshot!=='object')continue;
+     if(Array.isArray(snapshot.inv)&&assets.size)snapshot.inv=snapshot.inv.filter(a=>!assets.has(String(a.id)));
+     if(Array.isArray(snapshot.tx))snapshot.tx=snapshot.tx.filter(tx=>!relatedTransaction(tx));
+     localStorage.setItem(key,JSON.stringify(snapshot));
+    }catch(e){}
+   }
+  }catch(e){}
+  try{
+   const map=cloudMapLoad();
+   for(const [localId,remoteId] of Object.entries(map)){
+    if(assets.has(String(localId))||assets.has(String(remoteId))||transactions.has(String(localId))||transactions.has(String(remoteId)))delete map[localId];
+   }
+   cloudMapSave(map);
+  }catch(e){}
+ }
+ save();
+}
+
+async function cloudInvestmentMutation(mode,payload){
+ if(!CLOUD_USER)throw new Error('Sign in to your cloud account first.');
+ if(!navigator.onLine||CLOUD_OFFLINE)throw new Error('Connect to the internet before changing investment data. No local or cloud data was deleted.');
+ if(!await cloudEnsureClient())throw new Error('Supabase client is unavailable.');
+ const {data:sessionData,error:sessionError}=await SB.auth.getSession();
+ if(sessionError)throw sessionError;
+ if(!sessionData.session||sessionData.session.user.id!==CLOUD_USER.id)throw new Error('Sign in to the same cloud account before changing investment data.');
+ CLOUD_USER=sessionData.session.user;
+
+ if(cloudPendingCount()){
+  const synced=await cloudSyncPending(false,false);
+  if(!synced||cloudPendingCount())throw new Error('There are pending cloud changes. Sync them successfully before editing or deleting this investment.');
+ }
+ const map=cloudMapLoad();
+ const localAssetId=String(payload.investmentId);
+ const cloudAssetId=map[localAssetId]||localAssetId;
+ if(String(cloudAssetId).startsWith('local-'))throw new Error('The investment asset has not been synchronized to the cloud yet.');
+
+ let data,error;
+ if(mode==='update'){
+  const subtype=['bars','coins','jewelry','sovereigns','scrap','other'][Number(payload.type)]||'other';
+  ({data,error}=await SB.rpc('update_investment_asset',{
+   p_id:cloudAssetId,
+   p_name:payload.name,
+   p_asset_subtype:subtype,
+   p_karat:Number(payload.karat),
+   p_current_unit_price:payload.price==null?null:Number(payload.price)
+  }));
+ }else if(mode==='delete_asset'||mode==='delete_transaction'){
+  let cloudTransactionId=null;
+  if(mode==='delete_transaction'){
+   const localTransactionId=String(payload.transactionId);
+   cloudTransactionId=map[localTransactionId]||localTransactionId;
+   if(String(cloudTransactionId).startsWith('local-'))throw new Error('The selected investment operation has not been synchronized yet.');
+  }
+  ({data,error}=await SB.rpc('delete_investment_data',{
+   p_investment_id:cloudAssetId,
+   p_transaction_id:cloudTransactionId
+  }));
+ }else throw new Error('Unsupported investment action.');
+
+ if(error)throw error;
+ if(mode==='delete_asset'||mode==='delete_transaction'){
+  const deletedIds=Array.isArray(data&&data.deleted_transaction_ids)?data.deleted_transaction_ids.map(String):[];
+  const assetIds=mode==='delete_asset'?[localAssetId,cloudAssetId]:[];
+  const transactionIds=mode==='delete_transaction'?[String(payload.transactionId),String(cloudTransactionId),...deletedIds]:deletedIds;
+  for(const [localId,remoteId] of Object.entries(map)){
+   if(assetIds.includes(String(remoteId))&&!assetIds.includes(String(localId)))assetIds.push(String(localId));
+   if(deletedIds.includes(String(remoteId))&&!transactionIds.includes(String(localId)))transactionIds.push(String(localId));
+  }
+  purgeInvestmentLocalCopies(assetIds,transactionIds,CLOUD_USER.id);
+ }
+ try{await cloudRefresh(true);}catch(refreshError){
+  toast('تم تنفيذ التغيير في السحابة وتحديث النسخة المحلية، لكن تعذر جلب بقية البيانات الآن: '+(refreshError.message||String(refreshError)));
+ }
+ return data;
+}
+
 
 async function cloudCreateLegacy(snapshot,sourceId){
  await cloudLoadCategories();
