@@ -100,3 +100,51 @@ test('budget migration backfills existing names and enforces account ownership t
   assert.match(migration, /budgets_insert_own[\s\S]*wallet_accounts a[\s\S]*a\.user_id = \(select auth\.uid\(\)\)/);
   assert.match(migration, /budgets_update_own[\s\S]*wallet_accounts a[\s\S]*a\.user_id = \(select auth\.uid\(\)\)/);
 });
+
+test('cloud management actions no longer use the legacy cloud-blocked message', () => {
+  assert.doesNotMatch(html, /هذا الإجراء الإداري غير متاح بعد على السجلات السحابية/);
+  for (const action of [
+    "cloudManageItem('loan',id,'update'",
+    "cloudManageItem('goal',id,'update'",
+    "cloudManageItem('goal',id,'pause'",
+    "cloudManageItem('investment',id,'update'",
+    "cloudManageItem('loan',id,'archive'",
+    "cloudManageItem('goal',id,'archive'",
+    "cloudManageItem('investment',id,'archive'",
+    "cloudManageItem('wallet',id,'archive'",
+    "cloudManageItem('budget',id,'delete'"
+  ]) assert.ok(html.includes(action), 'missing cloud management route: ' + action);
+});
+
+test('cloud management RPC checks the live Supabase session and calls the owner-scoped database function', () => {
+  const start = html.indexOf('async function cloudManageItem(');
+  const end = html.indexOf('async function cloudCreateLegacy(', start);
+  assert.ok(start >= 0 && end > start, 'cloud management helper should exist');
+  const helper = html.slice(start, end);
+  assert.match(helper, /SB\.auth\.getSession\(\)/);
+  assert.match(helper, /sessionData\.session\.user\.id!==CLOUD_USER\.id/);
+  assert.match(helper, /SB\.rpc\('manage_financial_item'/);
+  assert.match(helper, /await cloudRefresh\(\)/);
+});
+
+test('cloud edits preserve financial ledger balances by changing profile metadata only', () => {
+  assert.match(html, /cloudManageItem\('loan',id,'update'/);
+  assert.match(html, /cloudManageItem\('goal',id,'update'/);
+  assert.match(html, /cloudManageItem\('investment',id,'update'/);
+  assert.match(html, /p_transaction_id/);
+  assert.match(html, /cloudEditTransaction\(r,next\)/);
+});
+
+test('archived records remain loaded for transaction history and balances, while selectors show active records only', () => {
+  assert.match(html, /SB\.from\('loans'\)\.select\('\*'\)\.eq\('user_id',uid\)/);
+  assert.match(html, /SB\.from\('savings_goals'\)\.select\('\*'\)\.eq\('user_id',uid\)/);
+  assert.match(html, /is_archived:!!l\.is_archived/);
+  assert.match(html, /is_paused:!!g\.is_paused/);
+  assert.match(html, /const AO=\(\)=>S\.accs\.filter\(a=>!a\.archived\)/);
+  assert.match(html, /NW=\(\)=>accT\(\)\+savT\(\)\+invV\(\)\+Z\(S\.loans\.filter/);
+});
+
+test('manual investment unit prices persist in the cloud and override spot-derived gram values only when set', () => {
+  assert.match(html, /current_unit_price/);
+  assert.match(html, /a\.price!==null&&a\.price!==undefined&&Number\.isFinite\(Number\(a\.price\)\)/);
+});
