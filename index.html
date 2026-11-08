@@ -1053,10 +1053,12 @@ async dg(id){
 },
 async di(id){
  const a=S.inv.find(z=>String(z.id)===String(id));if(!a)return;
- if(!confirm(_('أرشفة هذا الأصل؟ ستبقى قيمته وسجل عملياته محفوظين.|Archive this asset? Its value and transaction history will be preserved.')))return;
+ if(!confirm(_('تأكيد الحذف النهائي لهذا الأصل؟ سيتم حذف الأصل وجميع عمليات الشراء والبيع وقيودها وسجلات التصحيح المرتبطة به نهائيًا من التخزين المحلي والسحابي. لا يمكن التراجع عن هذا الإجراء.|Permanently delete this asset? The asset, all purchases and sales, their journal entries and linked correction records will be permanently removed from local and cloud storage. This cannot be undone.')))return;
  try{
-  if(CLOUD_USER){await cloudManageItem('investment',id,'archive');toast(_('تمت أرشفة الأصل مع الاحتفاظ بسجله.|Asset archived; its history was preserved.'));}
-  else{a.archived=true;save();build();toast(_('تمت أرشفة الأصل مع الاحتفاظ بسجل عملياته.|Asset archived; its transaction history was preserved.'));}
+  if(CLOUD_USER)await cloudInvestmentMutation('delete_asset',{investmentId:id});
+  else purgeInvestmentLocalCopies([id],[],null);
+  build();
+  toast(_('تم حذف الأصل وجميع عملياته نهائيًا.|The asset and all its operations were permanently deleted.'));
  }catch(e){toast(e.message||String(e));}
 },
 async da(id){
@@ -1076,7 +1078,7 @@ async db(id){
 },
 restoreLoan(id){cloudManageItem('loan',id,'restore').then(()=>toast(_('تمت استعادة القرض.|Loan restored.'))).catch(e=>toast(e.message||String(e)));},
 restoreGoal(id){cloudManageItem('goal',id,'restore').then(()=>toast(_('تمت استعادة الهدف.|Goal restored.'))).catch(e=>toast(e.message||String(e)));},
-restoreInvestment(id){const a=S.inv.find(z=>String(z.id)===String(id));if(!a)return;if(CLOUD_USER){cloudManageItem('investment',id,'restore').then(()=>toast(_('تمت استعادة الأصل.|Asset restored.'))).catch(e=>toast(e.message||String(e)));}else{a.archived=false;save();build();toast(_('تمت استعادة الأصل.|Asset restored.'));}},
+
 restoreWallet(id){cloudManageItem('wallet',id,'restore').then(()=>toast(_('تمت استعادة الحساب.|Account restored.'))).catch(e=>toast(e.message||String(e)));},
 
 csv(ts){const L=rows(ts.split(',')).map(r=>[r.d,_(TL[r.t]),lab(r),r.a,r.c,nm(S.accs,r.acc),(r.note||'').replace(/[",\n]/g,' ')].join(','));showCsv(['date,type,detail,amount,currency,account,note',...L].join('\n'))},
