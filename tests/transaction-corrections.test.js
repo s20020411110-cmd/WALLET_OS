@@ -89,7 +89,7 @@ test('manual transfers retain both source and destination wallets and remain tra
 
 test('budgets accept a user-entered name, expense category and optional linked wallet account', () => {
   const start = html.indexOf('function addBud(){');
-  const end = html.indexOf('\\nconst IC=', start);
+  const end = html.indexOf('\nconst IC=', start);
   assert.ok(start >= 0 && end > start, 'budget form should exist');
   const form = html.slice(start, end);
   assert.match(form, /categoryName/);
@@ -104,7 +104,7 @@ test('cloud budget writes and refreshes preserve manual category ID, name and ac
   assert.match(html, /budget_name:String\(b\.name\|\|''\)\.trim\(\)/);
   assert.match(html, /account_id:b\.accountId\|\|null/);
   assert.match(html, /categoryId=b\.categoryId\|\|cloudCategoryId\('expense',b\.ci\)/);
-  assert.match(html, /categoryId:item\.categoryId\?\(map\[String\(item\.categoryId\)\]\|\|item\.categoryId\):cloudCategoryId/);
+  assert.match(html, /categoryId=item\.categoryId\?\(map\[String\(item\.categoryId\)\]\|\|item\.categoryId\):cloudCategoryId/);
   assert.match(html, /categoryId:b\.category_id/);
 });
 
@@ -115,7 +115,7 @@ test('offline budget queue maps pending custom category and account IDs before t
 });
 
 test('account-linked budgets calculate spending only from the selected wallet', () => {
-  assert.match(html, /r\.t=='exp'&&r\.cat==b\.ci&&\(!b\.accountId\|\|String\(r\.acc\)===String\(b\.accountId\)\)/);
+  assert.match(html, /r\.t=='exp'&&\(b\.categoryId\?String\(r\.categoryId\)===String\(b\.categoryId\):r\.cat==b\.ci\)&&\(!b\.accountId\|\|String\(r\.acc\)===String\(b\.accountId\)\)/);
 });
 
 test('budget migration backfills existing names and enforces account ownership through RLS', () => {
