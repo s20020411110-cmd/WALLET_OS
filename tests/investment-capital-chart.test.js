@@ -61,6 +61,9 @@ test('user-controlled text is HTML-escaped before insertion into application mar
   assert.match(html, /htm\(r\.note\)/);
   assert.match(html, /htm\(S\.user\.name\)/);
   assert.match(html, /htm\(b\.name\|\|_\(CAT\[b\.ci\]\)\)/);
+  assert.match(html, /<b>\$\{htm\(lab\(r\)\)\}<\/b><small>\$\{r\.d\}<\/small>/);
+  assert.match(html, /htm\(nm\(S\.accs,b\.accountId\)\)/);
+  assert.doesNotMatch(html, /<b>\$\{lab\(r\)\}<\/b>/);
 });
 
 test('home dashboard separates seven categories and uses correct asset/income ratio bases', () => {
