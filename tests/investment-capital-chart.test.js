@@ -58,7 +58,7 @@ test('user-controlled text is HTML-escaped before insertion into application mar
   assert.match(form, /htm\(ti\)/);
   assert.match(form, /htm\(f\[1\]\)/);
   assert.match(form, /htm\(o\[1\]\)/);
-  assert.match(form, /htm\(f\[4\]\?\?' '\)/);
+  assert.match(form, /htm\(f\[4\]\?\?''\)/);
   assert.match(html, /\$\{htm\(z\[1\]\)\}/);
   assert.match(html, /htm\(r\.note\)/);
   assert.match(html, /htm\(S\.user\.name\)/);
