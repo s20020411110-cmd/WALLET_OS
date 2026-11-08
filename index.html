@@ -1600,7 +1600,7 @@ return `${empty?`<div class=cd style="text-align:center"><h3>${_('ابدأ بت�
 <div class=qas>${[['inc','↗','دخل|Income'],['exp','↘','مصروف|Expense'],['trf','⇄','تحويل|Transfer']].map(a=>`<button class=qa data-a=add data-v=${a[0]}><span>${a[1]}</span><small>${_(a[2])}</small></button>`).join('')}<a class=qa href="#/exchange"><span>$</span><small>${_('صرف|Exchange')}</small></a></div>
 <div class="g c2 wallet-overview">
 ${(()=>{
- const assets=NW()+Z(LN().map(rem));
+ const assets=NW()+Z(S.loans.filter(l=>l.kind!='owed').map(rem));
  const ratio=(key,value)=>{
   const denominator=key==='income'||key==='expenses'?I[c]:assets;
   if(!(denominator>0))return null;
