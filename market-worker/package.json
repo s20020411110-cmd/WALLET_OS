@@ -1,0 +1,14 @@
+{
+  "name": "wallet-os-gold-market-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Single-leader Twelve Data XAU/USD streaming worker for WALLET OS",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.2.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test ../tests/market-worker.test.js"
+  }
+}
