@@ -86,7 +86,7 @@ jobs:
             echo ""
             echo '```'
             cat apk-sha256.txt
-            echo "```"
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload APK artifact
