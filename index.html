@@ -819,9 +819,8 @@ const card=g=>{const t=cv(g.target,g.cur),s=sv(g),p=s/t*100,left=Math.max(0,t-s)
 return hd('بناء الثروة والأهداف|Wealth & goals','املأ أهدافك دائرة بعد دائرة|Fill your goals, one ring at a time',addb('goal','هدف جديد|New goal'))+`<div class="g k">${kc('إجمالي المدخرات|Total saved',savT(),'',gr,'var(--gd)')}${kc('مدخرات الشهر|This month',m[c],'',m,'var(--gd)')}${kc('نسبة الادخار|Saving rate',I[c]?m[c]/I[c]*100:0,'',null,'#a0a4ad','','%')}</div>
 <div class="g c2"><div class=cd><h4>Savings Growth</h4>${line(gr.slice(0,c+1),'var(--gd)')}</div><div class=cd><h4>Monthly Savings</h4>${bars(m,'var(--gd)')}</div></div><div class="g c2">${S.goals.filter(g=>!g.archived).map(card).join('')||`<p class=em>${_('أنشئ هدفك الأول|Create your first goal')}</p>`}${S.goals.some(g=>g.archived)?`<h3>${_('أهداف مؤرشفة|Archived goals')}</h3><div class="g c2">${S.goals.filter(g=>g.archived).map(g=>`<div class=cd><b>${g.n}</b><small class=bc>${_('الرصيد المحفوظ|Preserved balance')} · ${fm(sv(g),g.cur)}</small><button class=bt data-a=restoreGoal data-v=${g.id}>${_('استعادة|Restore')}</button></div>`).join('')}</div>`:''}</div>`};
 PG.invest=()=>{
- const A=S.inv.map(a=>({a,p:pos(a)})),v=invV(),gr=Z(A.map(z=>z.p.q*(PUR[z.a.karat||24]||.999)));
- const by=GT.map((s,i)=>({l:_(s),v:Z(A.filter(z=>(z.a.type||0)==i).map(z=>cv(z.p.v,z.a.cur))),c:PAL[i]})).filter(z=>z.v>0);
- const g=S.gold,esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+ const A=S.inv.map(a=>({a,p:pos(a)}));
+ const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
  const controls=addb("asset","إضافة ذهب|Add gold")+'<button class=bt data-a=lv>'+_("تحديث الآن|Refresh")+'</button><button class=bt data-a=gold>'+_("سعر يدوي|Manual price")+'</button>';
  const headers=["الأصل|Asset","الجرامات|Grams","متوسط التكلفة/جم|Avg cost/g","السعر/جم|Price/g","القيمة الحالية|Current value","ربح/خسارة كلي|Total P/L","الإجراءات|Actions"].map(h=>"<th>"+_(h)+"</th>").join("");
  const rows=A.map(({a,p})=>{
@@ -831,7 +830,7 @@ PG.invest=()=>{
    '<button class=ib data-a=ip data-v="'+a.id+'" title="'+_("تعديل الأصل|Edit asset")+'" aria-label="'+_("تعديل الأصل|Edit asset")+'">✎</button>'+
    '<button class=ib data-a=di data-v="'+a.id+'" title="'+_("حذف الأصل وعملياته نهائيًا|Permanently delete asset and operations")+'" aria-label="'+_("حذف الأصل وعملياته نهائيًا|Permanently delete asset and operations")+'">✕</button>';
   return "<tr><td>"+esc(a.n)+"<small>"+_(GT[a.type||0]||GT[5])+" · "+(a.karat||24)+"K</small></td><td>"+Number(p.q||0).toFixed(3)+"</td><td>"+(p.q?fm(p.c/p.q,a.cur):"—")+"</td><td>"+fm(gp(a),a.cur)+"</td><td class=am>"+fm(p.v,a.cur)+"</td>"+
-   '<td class=am style="color:'+(total>=0?"#16a34a":"#dc2626")+'">'+fm(total)+'<small>'+_("محقق|Realized")+" "+fm(p.pl)+" · "+_("غير محقق|Unrealized")+" "+fm(unrealized)+"</small></td><td><div class=cht>"+actions+"</div></td></tr>";
+   '<td class=am style="color:'+(total>=0?"#16a34a":"#dc2626")+'">'+fm(total)+'</td><td><div class=cht>'+actions+'</div></td></tr>';
  }).join("")||'<tr><td colspan=7 class=em>'+_("لا ذهب مسجل|No gold yet")+"</td></tr>";
  const assetIds=new Set(S.inv.map(a=>String(a.id)));
  const history=S.tx.filter(r=>(r.t==="buy"||r.t==="sell")&&assetIds.has(String(r.ref))&&!r.is_voided)
