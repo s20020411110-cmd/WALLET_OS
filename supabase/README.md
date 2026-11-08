@@ -187,10 +187,10 @@ Add that same origin (and any custom production domain later adopted) to the all
 
 ## Finance workflow CI verification — 2026-11-08
 
-- Latest application/test source commit verified: `324d76752b41ccf9b58db2e96b183d56de1dbe5f`. The subsequent currency-preselection change on `746368a7cca4157aa6da7da4877ad8da333ee5f` and offline-budget test change on `efa785c4488e483ca8c94dea365daa465a899601` are also covered by the latest workflow.
-- GitHub Actions Market data validation run `42455884757` passed **73/73 tests** (0 failed, 0 skipped) on `efa785c4488e483ca8c94dea365daa465a899601`: https://github.com/s20020411110-cmd/WALLET_OS/actions/runs/42455884757
-- Android Debug build run `42455596870` completed successfully through regression tests, Capacitor preparation/sync, Gradle build, APK verification and artifact upload on `324d76752b41ccf9b58db2e96b183d56de1dbe5f`: https://github.com/s20020411110-cmd/WALLET_OS/actions/runs/42455596870
-- Uploaded artifact: `WALLET-OS-debug-APK`, artifact ID `13607701149`, 3,861,731 bytes, expires 2026-12-08. This is a Debug build, not a signed Release package. A fresh Android run for the later account-currency UI change is in progress.
+- Latest application/test source commit verified: `59da4528d9c08e2745f3fcf7529813fc88e1eca3`. The current `main` head adds documentation only after this tested source commit.
+- GitHub Actions Market data validation run `42456068872` passed **74/74 tests** (0 failed, 0 skipped): https://github.com/s20020411110-cmd/WALLET_OS/actions/runs/42456068872
+- Android Debug build run `42456068830` completed successfully through regression tests, Capacitor preparation/sync, Gradle build, APK verification and artifact upload on the same source/test commit: https://github.com/s20020411110-cmd/WALLET_OS/actions/runs/42456068830
+- Uploaded artifact: `WALLET-OS-debug-APK`, artifact ID `13607876304`, 3,862,412 bytes, expires 2026-12-08. Artifact ZIP SHA-256: `3b1edd72b7aa6eb3ca74612e42a0a86eb901ef9b553617385d2dbd21a74fbeb6`. This is a Debug build, not a signed Release package.
 - The rollback-only Supabase checks for a 100 SAR opening wallet, 40 SAR borrowed loan and 20 SAR receivable confirmed the expected 120 SAR wallet balance, 40 SAR liability, 20 SAR receivable and balanced journal entries. Manual expense-category creation and duplicate-name reuse also passed. Test transactions were rolled back.
 - The post-test read-only integrity check found zero active transactions without journals, zero journal entries without lines, zero unbalanced journal entries, and zero loan-disbursement transactions without a linked loan.
 - No production deployment, rollback, or Vercel setting change was performed. The verified source is not claimed to be live.
