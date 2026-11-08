@@ -701,7 +701,7 @@ const portfolioPLChart=assets=>{
  const path=points=>points.length>1?sm(points):"M "+points[0][0]+" "+points[0][1];
  const investedPath=path(investedPoints),currentPath=path(currentPoints);
  const area=rows.length>1?currentPath+" L "+currentPoints[currentPoints.length-1][0]+" "+bottom+" L "+currentPoints[0][0]+" "+bottom+" Z":"";
- const selectedIndex=Number.isInteger(CAP_SELECTED)?Math.max(0,Math.min(rows.length-1,CAP_SELECTED)):0,selected=rows[selectedIndex];
+ const selectedIndex=typeof CAP_SELECTED==="number"&&Number.isFinite(CAP_SELECTED)?Math.max(0,Math.min(rows.length-1,CAP_SELECTED)):0,selected=rows[selectedIndex];
  const escapeHtml=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
  const gradId="capitalArea"+(seq++);
  const grid=[0,1,2,3,4].map(i=>{const value=max*(1-i/4),yy=T+i*plotH/4;return "<line x1=\""+L+"\" x2=\""+(W-R)+"\" y1=\""+yy+"\" y2=\""+yy+"\" class=\"capital-gridline\"/><text x=\""+(L-12)+"\" y=\""+(yy+4)+"\" text-anchor=\"end\" class=\"capital-axis-label\">"+escapeHtml(fm(value))+"</text>";}).join("");
@@ -813,7 +813,7 @@ PG.invest=()=>{
    '<button class=ib data-a=ip data-v="'+a.id+'" title="'+_("تعديل الأصل|Edit asset")+'" aria-label="'+_("تعديل الأصل|Edit asset")+'">✎</button>'+
    '<button class=ib data-a=di data-v="'+a.id+'" title="'+_("أرشفة الأصل|Archive asset")+'" aria-label="'+_("أرشفة الأصل|Archive asset")+'">⌑</button>';
   return "<tr><td>"+esc(a.n)+"<small>"+_(GT[a.type||0]||GT[5])+" · "+(a.karat||24)+"K</small></td><td>"+Number(p.q||0).toFixed(3)+"</td><td>"+(p.q?fm(p.c/p.q,a.cur):"—")+"</td><td>"+fm(gp(a),a.cur)+"</td><td class=am>"+fm(p.v,a.cur)+"</td>"+
-   '<td class=am style="color:'+(total>=0?"#16a34a":"#dc2626")+'">'+fm(total)+'<small>'+_("محقق|Realized")+" "+fm(p.pl)+" · "+_("غير محقق|Unrealized")+" "+fm(unrealized)+"</small></td><td><div class=cht>'+actions+"</div></td></tr>";
+   '<td class=am style="color:'+(total>=0?"#16a34a":"#dc2626")+'">'+fm(total)+'<small>'+_("محقق|Realized")+" "+fm(p.pl)+" · "+_("غير محقق|Unrealized")+" "+fm(unrealized)+"</small></td><td><div class=cht>"+actions+"</div></td></tr>";
  }).join("")||'<tr><td colspan=7 class=em>'+_("لا ذهب مسجل|No gold yet")+"</td></tr>";
  const assetIds=new Set(S.inv.map(a=>String(a.id)));
  const history=S.tx.filter(r=>(r.t==="buy"||r.t==="sell")&&assetIds.has(String(r.ref))&&!r.is_voided)
