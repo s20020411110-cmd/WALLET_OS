@@ -11,10 +11,10 @@ const investmentPage = html.slice(pageStart, pageEnd);
 
 test('investment page combines portfolio P/L and gold distribution without duplicate charts', () => {
   assert.ok(pageStart >= 0 && pageEnd > pageStart, 'investment page should exist');
-  assert.match(investmentPage, /رأس المال المستثمر والربح والخسارة حسب الأصل\\|Invested capital and profit\/loss by asset/);
+  assert.match(investmentPage, /رأس المال المستثمر والربح والخسارة حسب الأصل\|Invested capital and profit\/loss by asset/);
   assert.equal(investmentPage.split('portfolioPLChart(A)').length - 1, 1);
-  assert.match(investmentPage, /توزيع الذهب\\|Gold allocation/);
-  assert.doesNotMatch(investmentPage, /حركة الذهب في البورصة العالمية\\|Global gold market movement/);
+  assert.match(investmentPage, /توزيع الذهب\|Gold allocation/);
+  assert.doesNotMatch(investmentPage, /حركة الذهب في البورصة العالمية\|Global gold market movement/);
 });
 
 test('capital comparison chart shows invested amount, current value and total P/L', () => {
@@ -43,7 +43,7 @@ test('investment page exposes transaction editing and reversal deletion beside t
   assert.match(investmentPage, /investment-history/);
   assert.match(investmentPage, /data-a=ed data-v=/);
   assert.match(investmentPage, /data-a=del data-v=/);
-  assert.match(investmentPage, /سجل عمليات الاستثمار\\|Investment transaction history/);
+  assert.match(investmentPage, /سجل عمليات الاستثمار\|Investment transaction history/);
   assert.match(html, /SB\.rpc\('void_financial_transaction'/);
   assert.match(html, /SB\.rpc\('edit_financial_transaction'/);
 });
