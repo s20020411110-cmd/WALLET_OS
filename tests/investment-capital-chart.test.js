@@ -63,7 +63,7 @@ test('investment edits and permanent deletion validate dependencies before remov
 test('investment assets provide edit and permanent delete only, with no archive or restore controls', () => {
   assert.match(investmentPage, /data-a=ip data-v=/);
   assert.match(investmentPage, /data-a=di data-v=/);
-  assert.doesNotMatch(investmentPage, /restoreInvestment|أرشفة الأصل|Archive asset|مؤرشف\|Archived/);
+  assert.doesNotMatch(investmentPage, /restoreInvestment|أرشفة الأصل|أرشفه|Archive asset|archive it|مؤرشف\\|Archived/);
   assert.doesNotMatch(html, /restoreInvestment\(id\)/);
   assert.match(html, /purgeInvestmentLocalCopies/);
   assert.match(html, /wos_pre_cloud_backup_/);
