@@ -45,7 +45,10 @@ In Supabase Dashboard → Realtime → Settings, disable **Allow public access**
 
 The official Twelve Data commodity catalog lists `XAU/USD` as Gold Spot. Its price WebSocket costs one WS credit per subscribed symbol. Basic/Grow individual subscriptions are limited to trial symbols; full instrument streaming is available on Pro individual and Venture business plans. That streaming entitlement is not sufficient by itself for public production display: Twelve Data's current usage policy says individual plans are personal/internal and prohibit third-party commercial display or redistribution. Business plans support commercial display subject to exchange licensing; non-US data needs additional approval and redistribution requires a separate agreement.
 
-Do not set `TWELVE_DATA_USAGE_APPROVED=true` until the Twelve Data account owner has verified the XAU/USD subscription and obtained the required commercial, regional and redistribution rights for the exact WALLET OS use case. The worker continues using XAUS and Gold API fallbacks while this gate is false.
+Do not set `TWELVE_DATA_USAGE_APPROVED=true` until the Twelve Data account owner has verified the XAU/USD subscription and obtained the required commercial, regional and redistribution rights for the exact WALLET OS use case.
+
+For planning only, Twelve Data's current Business pricing page lists Venture at $499/month on monthly billing or $4,990/year (equivalent to $414/month on annual billing), with 2,500 WS credits on the displayed tier. The personal Pro individual plan currently lists 500+ WS credits depending on the selected tier, but it is not a substitute for business display/redistribution rights. Confirm the exact quote, exchange terms and XAU/USD entitlement with Twelve Data sales before purchase; pricing and licensing can change. One shared XAU/USD subscription consumes one WS credit, not one per WALLET OS user. Sources: https://twelvedata.com/pricing-business and https://support.twelvedata.com/en/articles/5332349-commercial-and-personal-usage.
+ The worker continues using XAUS and Gold API fallbacks while this gate is false.
 
 ## Reliability and data rules
 
