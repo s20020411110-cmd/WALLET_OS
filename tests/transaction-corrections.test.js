@@ -276,3 +276,21 @@ test('loan origination migration creates one owner-scoped balanced wallet and de
   assert.match(migration,/revoke all on function private\.create_loan_from_account_v1[\s\S]*from public,anon,authenticated/i);
   assert.match(migration,/grant execute on function private\.create_loan_from_account_v1[\s\S]*to authenticated/i);
 });
+
+
+test('an existing empty wallet can receive its one-time opening balance through the ledger RPC', () => {
+  assert.match(html, /opening\(id\)\{const account=S\.accs\.find/);
+  assert.match(html, /SB\.rpc\('set_wallet_opening_balance_v1'/);
+  assert.match(html, /account\.openingBalance=amount/);
+  assert.match(html, /لا يمكن تعديل الرصيد الافتتاحي بعد وجود حركات على الحساب/);
+  const migration=fs.readFileSync(path.join(__dirname,'..','supabase','wallet_os_existing_wallet_opening_balance_v1.sql'),'utf8');
+  assert.match(migration,/create or replace function private\.set_wallet_opening_balance_v1/i);
+  assert.match(migration,/if exists\([\s\S]*public\.transactions t[\s\S]*source_account_id=v_wallet\.id/i);
+  assert.match(migration,/idempotency_key='opening:'\|\|v_wallet\.id::text/i);
+  assert.match(migration,/insert into public\.journal_entries/i);
+  assert.match(migration,/amount_debit,base_debit/);
+  assert.match(migration,/amount_credit,base_credit/);
+  assert.match(migration,/create or replace function public\.set_wallet_opening_balance_v1[\s\S]*security invoker/i);
+  assert.match(migration,/revoke all on function private\.set_wallet_opening_balance_v1[\s\S]*from public,anon,authenticated/i);
+  assert.match(migration,/grant execute on function private\.set_wallet_opening_balance_v1[\s\S]*to authenticated/i);
+});
