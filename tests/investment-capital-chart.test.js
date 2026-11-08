@@ -104,7 +104,7 @@ test('home dashboard separates seven categories and uses correct asset/income ra
 
 test('ledger calculations keep transfers and savings neutral and include archived liabilities in gross assets', () => {
   const start = html.indexOf('const eff=');
-  const end = html.indexOf('function pos(a)', start);
+  const end = html.indexOf('const chg=', start);
   assert.ok(start >= 0 && end > start, 'financial calculation helpers should exist');
   const source = html.slice(start, end);
   const state = {
