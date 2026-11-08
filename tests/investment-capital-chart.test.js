@@ -132,8 +132,8 @@ test('ledger calculations keep transfers and savings neutral and include archive
   };
   const rates = { USD: 1, EUR: 100 / 90 };
   const cv = (amount, from, to = 'USD') => Number(amount) * rates[from] / rates[to];
-  const sum = values => values.reduce((total, value) => total + Number(value || 0), 0);
-  const Z = values => sum(values);
+  const sum = rows => rows.reduce((total, row) => total + cv(row.a, row.c), 0);
+  const Z = values => values.reduce((total, value) => total + Number(value || 0), 0);
   const helpers = vm.runInNewContext(source + ';({eff,bal,balB,rem,LN,OW,sv,savT,accT,NW})', {
     S: state, CLOUD_USER: null, cv, sum, Z
   });
