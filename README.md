@@ -142,3 +142,37 @@ The Gold investment page separates two data views:
 ## Investment capital and portfolio P/L chart
 
 The upper chart on the Gold / Investments page is a portfolio chart, not a global XAU/USD market chart. It compares, per investment asset, the remaining invested cost basis with the current holding value and displays total realized plus unrealized profit/loss. Amounts are converted to the user's base currency. The live global gold spot quote remains separate in the gold price card above. Regression coverage: `tests/investment-capital-chart.test.js`.
+
+
+## Real-time XAU/USD market feed
+
+WALLET OS now includes an independently deployable persistent market worker at market-worker/. It is deliberately separate from Vercel serverless functions, which do not provide the long-lived process required for one shared upstream WebSocket.
+
+- Primary path: Twelve Data XAU/USD WebSocket → one elected market-worker process → private Supabase Realtime Broadcast topic wallet-os-gold-market → authenticated WALLET OS browsers.
+- Fallback order: the existing XAUS spot API, then the existing Gold API. A fallback is shown with its real source; stale and unavailable states are not labelled live.
+- A quote carries XAU/USD, USD per troy ounce, USD per gram, nullable bid/ask, provider timestamp, server receive time, source, connection state and freshness. Gram conversion uses 31.1034768 grams per troy ounce.
+- The worker broadcasts each valid new tick. The existing gold_price_quotes table receives only changed snapshots, throttled by default to one every 120 seconds. Tick updates never call wallet, transaction or journal RPCs.
+- The frontend joins a private Realtime channel only after a real authenticated cloud session is present. It uses a one-second timer only to refresh the displayed quote-age counter; it does not poll for prices each second. A 30-second same-origin REST fallback remains in place when the worker heartbeat is absent.
+- Manual gold spot overrides remain untouched. A separate explicit Use live price action can replace that spot override after a valid quote is available. User-entered asset prices, gold holdings, historical transaction amounts and account balances are never rewritten by quote ticks.
+
+### Worker setup and deployment gate
+
+Read market-worker/README.md and market-worker/.env.example. The worker requires Node.js 22.2+ with built-in WebSocket/fetch, a server-only Supabase secret key, and a continuously running single-replica container host. Build the container from the repository root:
+
+```sh
+docker build -f market-worker/Dockerfile -t wallet-os-gold-market-worker market-worker
+```
+
+The worker is not deployed to another host by this change. The current WALLET OS Vercel project is on the Hobby plan and has no server-side environment variables configured. Do not set up a new paid host without first approving its cost and access model.
+
+Twelve Data is deliberately gated by TWELVE_DATA_USAGE_APPROVED=true. Before enabling it, verify the account can subscribe to XAU/USD and obtain the business/commercial, regional precious-metal and any third-party redistribution rights required for the exact WALLET OS audience. A personal Pro streaming entitlement does not automatically grant third-party display rights. Until those checks and credentials are completed, the worker uses XAUS then Gold API; no real Twelve Data connection is claimed.
+
+Apply supabase/wallet_os_gold_realtime_channel_v1.sql (and the subsequent RLS optimization migration) through Supabase migrations. In Supabase Dashboard → Realtime → Settings, disable Allow public access to enforce private Broadcast channels. Only authenticated non-anonymous sessions can receive the gold topic; lease RPCs and snapshot inserts are server-only.
+
+Automated checks:
+
+```sh
+node --test tests/market-worker.test.js tests/gold-price-api.test.js
+```
+
+These tests use mocked provider data. They validate message parsing, ounce/gram conversion, freshness, duplicate/out-of-order suppression, subscription acknowledgement, fallback ordering, reconnection backoff, snapshot throttling, private Broadcast payload shape and no financial-ledger writes. They do not establish that a Twelve Data credential or a production WebSocket session is active.
