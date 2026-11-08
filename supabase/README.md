@@ -30,6 +30,7 @@ This is a dedicated project for WALLET OS. It is not the Supabase project used b
 | 20261108051315 | wallet_os_duplicate_request_indexes_cleanup_v1 | Removed four identical redundant request-key indexes |
 | 20261108061254 | wallet_os_manual_finance_categories_v1 | Owner-scoped manual income/expense categories with matching ledger accounts |
 | 20261108062844 | wallet_os_loans_linked_to_wallet_accounts_v1 | Atomic loan/receivable origination linked to the selected wallet and journal |
+| 20261108064458 | wallet_os_existing_wallet_opening_balance_v1 | One-time audited opening-balance posting for existing empty wallets |
 
 The first six migrations remain recorded in the hosted Supabase migration history; the eight later hardening/correction migrations above are tracked as SQL files in this repository. The exact SQL for the original core schema migrations has not yet been exported into supabase/migrations/. Preserve hosted history as the source of truth and export/review the original SQL before future local schema work rather than reconstructing it from this guide.
 
@@ -175,20 +176,21 @@ Add that same origin (and any custom production domain later adopted) to the all
 ## Finance workflow integration — 2026-11-08
 
 - Account creation accepts the current cash/bank/e-wallet opening balance. Cloud opening balances are posted through the existing double-entry `create_wallet_account` RPC; local balances include the saved opening amount plus subsequent transactions.
+- Existing empty wallets can also receive a one-time opening balance through `set_wallet_opening_balance_v1`. It rejects accounts with previous activity, is idempotent for the same amount, and creates a balanced opening journal entry rather than updating the balance directly.
 - Income sources and expense categories are manually entered. Custom category creation is persisted through `create_finance_category`, creates the corresponding ledger account, returns the existing owner category on a repeated name, and is queued/remapped safely when offline.
 - Budgets accept a manually entered name and expense category. Optional wallet links constrain the spending calculation to that account; otherwise the budget tracks all matching-category spending.
 - Loans payable and receivables are separated into distinct pages. Both retain a common payment ledger, but origination is now account-linked through `create_loan_from_account_v1` so borrowed proceeds increase the selected wallet while receivables reduce the wallet that funds the lending.
 - Transaction history and loan cards show the loan/receivable origination movement. That originating journal row is protected from generic transaction editing/deletion, which would otherwise detach the cash movement from the loan principal.
-- A rollback-only Supabase integration check created a temporary wallet with 100 SAR, originated a 40 SAR borrowed loan and a 20 SAR receivable, then verified a 120 SAR wallet balance, a 40 SAR loan liability, a 20 SAR receivable asset and balanced journal entries. A separate rollback-only check verified manual expense-category creation, its ledger account and duplicate-name reuse. Both enclosing transactions were rolled back; no test records were left behind.
+- A rollback-only Supabase integration check created a temporary wallet with 100 SAR, originated a 40 SAR borrowed loan and a 20 SAR receivable, then verified a 120 SAR wallet balance, a 40 SAR loan liability, a 20 SAR receivable asset and balanced journal entries. A separate rollback-only check verified manual expense-category creation, its ledger account and duplicate-name reuse. Both enclosing transactions were rolled back; no test records were left behind. A third rollback-only check set a 55 SAR opening balance on an existing empty wallet, verified idempotent retry and rejection of a conflicting amount, and confirmed the journal stayed balanced. All test records were rolled back.
 - The new loan RPC wrapper is SECURITY INVOKER; its private implementation is SECURITY DEFINER with an empty search path, checks `auth.uid()` ownership and has execute grants only for authenticated users. The anon role has no execute permission.
 - Deployment remains deliberately deferred. These source and database changes are not claimed to be live on the production URL.
 
 ## Finance workflow CI verification — 2026-11-08
 
-- Latest application/test source commit verified: `324d76752b41ccf9b58db2e96b183d56de1dbe5f`.
-- GitHub Actions Market data validation run `42455596878` passed **73/73 tests** (0 failed, 0 skipped): https://github.com/s20020411110-cmd/WALLET_OS/actions/runs/42455596878
-- Android Debug build run `42455596870` completed successfully through regression tests, Capacitor preparation/sync, Gradle build, APK verification and artifact upload: https://github.com/s20020411110-cmd/WALLET_OS/actions/runs/42455596870
-- Uploaded artifact: `WALLET-OS-debug-APK`, artifact ID `13607701149`, 3,861,731 bytes, expires 2026-12-08. This is a Debug APK, not a signed Release build.
+- Latest application/test source commit verified: `324d76752b41ccf9b58db2e96b183d56de1dbe5f`. The subsequent currency-preselection change on `746368a7cca4157aa6da7da4877ad8da333ee5f` and offline-budget test change on `efa785c4488e483ca8c94dea365daa465a899601` are also covered by the latest workflow.
+- GitHub Actions Market data validation run `42455884757` passed **73/73 tests** (0 failed, 0 skipped) on `efa785c4488e483ca8c94dea365daa465a899601`: https://github.com/s20020411110-cmd/WALLET_OS/actions/runs/42455884757
+- Android Debug build run `42455596870` completed successfully through regression tests, Capacitor preparation/sync, Gradle build, APK verification and artifact upload on `324d76752b41ccf9b58db2e96b183d56de1dbe5f`: https://github.com/s20020411110-cmd/WALLET_OS/actions/runs/42455596870
+- Uploaded artifact: `WALLET-OS-debug-APK`, artifact ID `13607701149`, 3,861,731 bytes, expires 2026-12-08. This is a Debug build, not a signed Release package. A fresh Android run for the later account-currency UI change is in progress.
 - The rollback-only Supabase checks for a 100 SAR opening wallet, 40 SAR borrowed loan and 20 SAR receivable confirmed the expected 120 SAR wallet balance, 40 SAR liability, 20 SAR receivable and balanced journal entries. Manual expense-category creation and duplicate-name reuse also passed. Test transactions were rolled back.
 - The post-test read-only integrity check found zero active transactions without journals, zero journal entries without lines, zero unbalanced journal entries, and zero loan-disbursement transactions without a linked loan.
 - No production deployment, rollback, or Vercel setting change was performed. The verified source is not claimed to be live.
