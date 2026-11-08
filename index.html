@@ -489,11 +489,11 @@ const upto=(t,i,y=S.year)=>sum(S.tx.filter(r=>r.t==t&&r.d<=`${y}-${pad(i+1)}-31`
 const eff=(r,id)=>{let k=0,l;if(r.acc==id)k=['inc','sell'].includes(r.t)?1:r.t=='pay'?((l=S.loans.find(z=>z.id==r.ref))&&l.kind=='owed'?1:-1):-1;if(r.t=='trf'&&r.ref==id)k+=1;return k};
 const bal=a=>CLOUD_USER&&Number.isFinite(a.cloudBalance)?a.cloudBalance+S.tx.filter(r=>String(r.id).startsWith('local-')).reduce((s,r)=>s+(r.t=='trf'&&r.ref==a.id?cv(r.ta==null?r.a:r.ta,r.tc||r.c,a.cur):eff(r,a.id)*cv(r.a,r.c,a.cur)),0):S.tx.reduce((s,r)=>s+(r.t=='trf'&&r.ref==a.id?cv(r.ta==null?r.a:r.ta,r.tc||r.c,a.cur):eff(r,a.id)*cv(r.a,r.c,a.cur)),0),balB=a=>cv(bal(a),a.cur);
 const paid=l=>sum(S.tx.filter(r=>r.t=='pay'&&r.ref==l.id)),rem=l=>Math.max(0,cv(l.orig,l.cur)-paid(l));
-const LN=()=>S.loans.filter(l=>l.kind!='owed'),OW=()=>S.loans.filter(l=>l.kind=='owed');
+const LN=()=>S.loans.filter(l=>l.kind!='owed'&&!l.archived),OW=()=>S.loans.filter(l=>l.kind=='owed'&&!l.archived);
 const sv=g=>sum(S.tx.filter(r=>r.t=='sav'&&r.ref==g.id)),savT=()=>Z(S.goals.map(sv));
 function pos(a){let q=+a.q0||0,c=+a.c0||0,pl=0;S.tx.filter(r=>r.ref==a.id&&(r.t=='buy'||r.t=='sell')).sort((m,n)=>m.d.localeCompare(n.d)).forEach(r=>{const v=cv(r.a,r.c,a.cur);if(r.t=='buy'){q+=+r.q;c+=v}else{const k=q?Math.min(1,r.q/q):0,cs=c*k;pl+=v-cs;q-=r.q;c-=cs}});return{q,c,pl,v:q*gp(a)}}
 const invV=()=>Z(S.inv.map(a=>cv(pos(a).v,a.cur))),invC=()=>Z(S.inv.map(a=>cv(pos(a).c,a.cur)));
-const accT=()=>Z(S.accs.map(balB)),NW=()=>accT()+savT()+invV()+Z(OW().map(rem))-Z(LN().map(rem));
+const accT=()=>Z(S.accs.map(balB)),NW=()=>accT()+savT()+invV()+Z(S.loans.filter(l=>l.kind=='owed').map(rem))-Z(S.loans.filter(l=>l.kind!='owed').map(rem));
 const chg=(a,b)=>b?(a-b)/Math.abs(b)*100:null;
 const chip=(v,inv)=>v==null?'<span class=bc>—</span>':`<span dir=ltr class="ch2 ${(v>=0)!=!!inv?'up':'dn'}">${v>=0?'▲':'▼'} ${Math.abs(v).toFixed(0)}%</span>`;
 const cf=v=>{const a=Math.abs(v);return(v<0?'-':'')+(a>=1e6?(a/1e6).toFixed(1)+'M':a>=1e3?(a/1e3).toFixed(a>=1e4?0:1)+'k':Math.round(a))};
@@ -677,8 +677,8 @@ const tbody=actList,table=ts=>`<div class=cd><div class=tl><input class=in place
 function toast(m){const e=document.createElement('div');e.className='ts';e.textContent=m;document.body.append(e);setTimeout(()=>e.remove(),2600)}
 function form(ti,fs,ok){const m=document.createElement('div');m.className='ov';m.innerHTML=`<form class=md><h3>${ti}</h3>${fs.map(f=>`<label>${f[1]}${f[2]=='s'?`<select name=${f[0]}>${f[3].map(o=>`<option value="${o[0]}" ${o[0]==f[4]?'selected':''}>${o[1]}</option>`).join('')}</select>`:f[2]=='checkbox'?`<input type=checkbox name=${f[0]} ${f[4]?'checked':''}>`:`<input class=in name=${f[0]} type=${f[2]} ${f[2]=='number'?'step=any min=0':''} value="${f[4]??''}">`}</label>`).join('')}<div class=ac><button type=button class=bt data-a=cl>${_('إلغاء|Cancel')}</button><button class="bt pr">${_('حفظ|Save')}</button></div></form>`;
 m.onsubmit=async e=>{e.preventDefault();const v=Object.fromEntries(new FormData(e.target));fs.filter(f=>f[2]=='checkbox').forEach(f=>v[f[0]]=!!v[f[0]]);const submit=m.querySelector('.bt.pr');if(submit)submit.disabled=true;try{const result=await ok(v);if(result!==false){m.remove();save();build();}}catch(err){toast(err.message||String(err));if(submit)submit.disabled=false;}};document.body.append(m);const f=m.querySelector('input,select');f&&f.focus()}
-const AO=()=>S.accs.map(a=>[a.id,a.n+' · '+a.cur]);
-function addTx(t,pre={}){const R2={trf:AO(),sav:S.goals.map(g=>[g.id,g.n]),pay:S.loans.map(l=>[l.id,l.n]),buy:S.inv.map(a=>[a.id,a.n]),sell:S.inv.map(a=>[a.id,a.n])}[t];
+const AO=()=>S.accs.filter(a=>!a.archived).map(a=>[a.id,a.n+' · '+a.cur]);
+function addTx(t,pre={}){const R2={trf:AO(),sav:S.goals.filter(g=>!g.archived).map(g=>[g.id,g.n]),pay:S.loans.filter(l=>!l.archived).map(l=>[l.id,l.n]),buy:S.inv.filter(a=>!a.archived).map(a=>[a.id,a.n]),sell:S.inv.filter(a=>!a.archived).map(a=>[a.id,a.n])}[t];
 if(R2&&!R2.length)return toast(_('أنشئ العنصر المرتبط أولًا|Create the related item first'));
 const f=[['a',_('المبلغ|Amount'),'number'],['c',_('العملة|Currency'),'s',CUR,S.base],['d',_('التاريخ|Date'),'date',,TD],['acc',_('الحساب|Account'),'s',AO()]];
 if(t=='inc')f.push(['cat',_('المصدر|Source'),'s',SRC.map((s,i)=>[i,_(s)])]);
@@ -696,9 +696,9 @@ delete v.m;if(v.cat!=null)v.cat=+v.cat;
 if(CLOUD_USER){await cloudPostTransaction(t,v);toast('✓ '+_(TL[t])+' · '+fm(v.a,v.c));return true;}
 LASTID=uid();S.tx.push({id:LASTID,t,...v});toast('✓ '+_(TL[t])+' · '+fm(v.a,v.c));return true;})}
 const DL=(n,c)=>l=>{};
-function alerts(){const a=[],c=cm();S.loans.filter(l=>l.kind!='owed'&&rem(l)>0&&l.due).forEach(l=>{const d=(new Date(l.due)-NOW)/864e5;if(d<=14)a.push([d<0?'r':'',`${_('موعد سداد|Payment due')}: ${l.n} — ${l.due}`])});
+function alerts(){const a=[],c=cm();S.loans.filter(l=>!l.archived&&l.kind!='owed'&&rem(l)>0&&l.due).forEach(l=>{const d=(new Date(l.due)-NOW)/864e5;if(d<=14)a.push([d<0?'r':'',`${_('موعد سداد|Payment due')}: ${l.n} — ${l.due}`])});
 S.bud.forEach(b=>{const p=spent(b)/cv(b.l,b.cur)*100,th=[100,90,75,50].find(x=>p>=x);if(th)a.push([th>=90?'r':'',`${_('الميزانية|Budget')} ${_(CAT[b.ci])}: ${p.toFixed(0)}% (≥${th}%)`])});
-S.goals.forEach(g=>{const p=sv(g)/cv(g.target,g.cur)*100;if(p>=90&&p<100)a.push(['',`${_('هدف يقترب من الاكتمال|Goal almost done')}: ${g.n} ${p.toFixed(0)}%`])});
+S.goals.filter(g=>!g.archived).forEach(g=>{const p=sv(g)/cv(g.target,g.cur)*100;if(p>=90&&p<100)a.push(['',`${_('هدف يقترب من الاكتمال|Goal almost done')}: ${g.n} ${p.toFixed(0)}%`])});
 const E=mon('exp');if(c>0&&E[c-1]>0&&E[c]>E[c-1]*1.25)a.push(['',`${_('ارتفاع ملحوظ في المصروفات|Spending rose notably')}: ${chg(E[c],E[c-1]).toFixed(0)}%`]);return a}
 function spent(b){const d=new Date(NOW-6*864e5).toISOString().slice(0,10);return sum(S.tx.filter(r=>r.t=='exp'&&r.cat==b.ci&&(!b.accountId||String(r.acc)===String(b.accountId))&&(b.p=='y'?r.d.slice(0,4)==TY:b.p=='w'?r.d>=d:r.d.slice(0,7)==TD.slice(0,7))))}
 const alb=()=>{const a=alerts();return a.length?a.map(z=>`<div class="al ${z[0]}">${z[1]}</div>`).join(''):`<p class=em>${_('لا توجد تنبيهات|No alerts')}</p>`};
@@ -722,11 +722,11 @@ const up=L.filter(l=>rem(l)>0&&l.due).sort((a,b)=>a.due.localeCompare(b.due));
 return hd('السيطرة على الالتزامات|Debt freedom','تابع كل قرض حتى آخر دفعة|Follow every loan to its last payment',addb('loan','إضافة قرض|Add loan'))+`<div class="g k">${kc('المتبقي|Remaining',rm,'',null,'#5b5f69')}${kc('أقساط شهرية|Monthly due',inst,'',null,'var(--g2)')}${kc('نسبة التخلص|Cleared',tot?pd/tot*100:0,'',null,'#5b5f69','','%')}</div>
 <div class="g c2 q"><div class=cd><h4>Debt Reduction</h4>${line(red,'#5b5f69')}</div><div class=cd><h4>Payment Timeline</h4>${up.map(l=>{const d=Math.ceil((new Date(l.due)-NOW)/864e5);return `<div class=row>${l.due}<span>${l.n}</span><b class="ch2 ${d<=14?'dn':'up'}">${d}${_('ي|d')}</b></div>`}).join('')||`<p class=em>${_('لا مواعيد قادمة|Nothing due')}</p>`}</div>
 </div>
-<h3>${_('القروض|Loans')}</h3><div class="g c2">${L.map(card).join('')||`<p class=em>${_('لا قروض مسجلة|No loans yet')}</p>`}</div><h3>${_('ديون مستحقة لك|Owed to you')}</h3><div class="g c2">${O.map(card).join('')||`<p class=em>${_('لا ديون مستحقة|None')}</p>`}</div>`};
+<h3>${_('القروض|Loans')}</h3><div class="g c2">${L.map(card).join('')||`<p class=em>${_('لا قروض مسجلة|No loans yet')}</p>`}</div><h3>${_('ديون مستحقة لك|Owed to you')}</h3><div class="g c2">${O.map(card).join('')||`<p class=em>${_('لا ديون مستحقة|None')}</p>`}</div>${S.loans.some(l=>l.archived)?`<h3>${_('قروض مؤرشفة|Archived loans')}</h3><div class="g c2">${S.loans.filter(l=>l.archived).map(l=>`<div class=cd><b>${l.n}</b><small class=bc>${fm(rem(l),l.cur)}</small><button class=bt data-a=restoreLoan data-v=${l.id}>${_('استعادة|Restore')}</button></div>`).join('')}</div>`:''}`};
 PG.savings=()=>{const m=mon('sav'),I=mon('inc'),c=cm(),gr=Array.from({length:12},(_,i)=>upto('sav',i)),rate=m.map((v,i)=>I[i]?v/I[i]*100:0),done=S.goals.filter(g=>sv(g)>=cv(g.target,g.cur)).length,r3=Z(m.slice(Math.max(0,c-2),c+1))/3;
 const card=g=>{const t=cv(g.target,g.cur),s=sv(g),p=s/t*100,left=Math.max(0,t-s),eta=left&&r3>0?new Date(NOW.getFullYear(),NOW.getMonth()+Math.ceil(left/r3),1).toLocaleDateString(LOC(),{month:'short',year:'numeric'}):'—';return `<div class="cd ${g.stop?'off':''}"><div class=dn2>${ring(p,'var(--gd)')}<div style="flex:1"><b>${g.n}</b><div class=bc>${fm(s)} / ${fm(t)}</div><div class=bc>${_('المتبقي|Left')} ${fm(left)} · ${_('الوصول|ETA')} ${eta}</div><div class=bc>${_('معدل شهري|Monthly')} ${fm(r3)}</div></div></div><div class=goalp><i style="flex:${Math.max(1,Math.min(99,p))};background:var(--g)">${p.toFixed(0)}%</i><i style="flex:${100-Math.max(1,Math.min(99,p))}">${Math.max(0,100-p).toFixed(0)}%</i></div><div class=cht style="margin-top:8px"><button class="bt pr" data-a=gadd data-v=${g.id}>＋</button><button class=bt data-a=gwd data-v=${g.id}>−</button><button class=bt data-a=gst data-v=${g.id}>${g.stop?_('استئناف|Resume'):_('إيقاف|Pause')}</button><button class=bt data-a=eg data-v=${g.id}>✎</button><button class=bt data-a=dg data-v=${g.id}>${_('حذف|Delete')}</button></div>${(h=>h.length?`<details><summary class=bc>${_('السجل|History')}</summary>${h.map(x=>`<div class=row>${x.d}<b>${fm(x.a,x.c)}</b></div>`).join('')}</details>`:'')(S.tx.filter(x=>x.t=='sav'&&x.ref==g.id).sort((a,b)=>b.d.localeCompare(a.d)))}</div>`};
 return hd('بناء الثروة والأهداف|Wealth & goals','املأ أهدافك دائرة بعد دائرة|Fill your goals, one ring at a time',addb('goal','هدف جديد|New goal'))+`<div class="g k">${kc('إجمالي المدخرات|Total saved',savT(),'',gr,'var(--gd)')}${kc('مدخرات الشهر|This month',m[c],'',m,'var(--gd)')}${kc('نسبة الادخار|Saving rate',I[c]?m[c]/I[c]*100:0,'',null,'#a0a4ad','','%')}</div>
-<div class="g c2"><div class=cd><h4>Savings Growth</h4>${line(gr.slice(0,c+1),'var(--gd)')}</div><div class=cd><h4>Monthly Savings</h4>${bars(m,'var(--gd)')}</div></div><div class="g c2">${S.goals.map(card).join('')||`<p class=em>${_('أنشئ هدفك الأول|Create your first goal')}</p>`}</div>`};
+<div class="g c2"><div class=cd><h4>Savings Growth</h4>${line(gr.slice(0,c+1),'var(--gd)')}</div><div class=cd><h4>Monthly Savings</h4>${bars(m,'var(--gd)')}</div></div><div class="g c2">${S.goals.filter(g=>!g.archived).map(card).join('')||`<p class=em>${_('أنشئ هدفك الأول|Create your first goal')}</p>`}${S.goals.some(g=>g.archived)?`<h3>${_('أهداف مؤرشفة|Archived goals')}</h3><div class="g c2">${S.goals.filter(g=>g.archived).map(g=>`<div class=cd><b>${g.n}</b><small class=bc>${_('الرصيد المحفوظ|Preserved balance')} · ${fm(sv(g),g.cur)}</small><button class=bt data-a=restoreGoal data-v=${g.id}>${_('استعادة|Restore')}</button></div>`).join('')}</div>`:''}</div>`};
 PG.invest=()=>{
  const A=S.inv.map(a=>({a,p:pos(a)})),v=invV(),gr=Z(A.map(z=>z.p.q*(PUR[z.a.karat||24]||.999))),plRows=portfolioPLRows(A),pl=Z(plRows.map(row=>row.total));
  const grossCapital=Z(A.map(({a})=>{const buys=Z(S.tx.filter(r=>r.ref==a.id&&r.t=='buy').map(r=>cv(r.a,r.c,a.cur)));return cv((+a.c0||0)+buys,a.cur)}));
@@ -739,7 +739,7 @@ PG.invest=()=>{
   return '<tr><td>'+a.n+'<small>'+_(GT[a.type||0]||GT[5])+' · '+(a.karat||24)+'K</small></td>'+
    '<td>'+p.q.toFixed(2)+'</td><td>'+(p.q?fm(p.c/p.q,a.cur):'—')+'</td><td>'+fm(gp(a),a.cur)+'</td><td class=am>'+fm(p.v,a.cur)+'</td>'+
    '<td class=am style="color:'+(total>=0?'#16a34a':'#dc2626')+'">'+fm(total,a.cur)+'<small>'+_('محقق|Realized')+' '+fm(p.pl,a.cur)+' · '+_('غير محقق|Unrealized')+' '+fm(unrealized,a.cur)+'</small></td>'+
-   '<td><div class=cht><button class=ib data-a=ib data-v='+a.id+'>＋</button><button class=ib data-a=is data-v='+a.id+'>−</button><button class=ib data-a=di data-v='+a.id+'>✕</button></div></td></tr>';
+   '<td><div class=cht>'+(a.archived?'<small class=bc>'+_('مؤرشف|Archived')+'</small><button class=bt data-a=restoreInvestment data-v='+a.id+'>'+_('استعادة|Restore')+'</button>':'<button class=ib data-a=ib data-v='+a.id+'>＋</button><button class=ib data-a=is data-v='+a.id+'>−</button><button class=ib data-a=ip data-v='+a.id+'>✎</button><button class=ib data-a=di data-v='+a.id+'>✕</button>')+'</div></td></tr>';
  }).join('')||'<tr><td colspan=7 class=em>'+_('لا ذهب مسجل|No gold yet')+'</td></tr>';
  return hd('الذهب — ذكاء الاستثمار|Gold — investment intelligence','محفظتك من الذهب فقط، مسعّرة بالأونصة العالمية|A gold-only portfolio priced off the global ounce',controls)+
   goldHeroCard(g)+goldKaratStrip(g)+
@@ -748,7 +748,7 @@ PG.invest=()=>{
   '<div class="g c2 q"><div class=cd><h4>'+_('ربح وخسارة المحفظة حسب الأصل|Portfolio P/L by asset')+'</h4>'+portfolioPLChart(A)+'</div><div class=cd><h4>'+_('توزيع الذهب|Gold allocation')+'</h4>'+donut(by)+'</div></div>'+
   '<div class=cd><div class=sc><table><thead><tr>'+headers+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
 };
-PG.accounts=()=>`${hd('أموالك في كل مكان|All your money','النقد والبنوك والمحافظ في مكان واحد|Cash, banks and wallets together',addb('acc','حساب جديد|New account')+`<button class=bt data-a=add data-v=trf>⇄ ${_('تحويل|Transfer')}</button>`)}<div class="g c2"><div class=cd><h4>${_('التوزيع|Distribution')}</h4>${donut(S.accs.map((a,i)=>({l:a.n,v:Math.max(0,balB(a)),c:PAL[i+2]})))}</div><div class=cd><h4>${_('إجمالي الأرصدة|Total balance')}</h4><b class=n data-n=${accT()} style="font-size:28px">${fm(accT())}</b><p class=bc>${_('التحويل بين الحسابات لا يُحتسب دخلًا ولا مصروفًا.|Transfers are never counted as income or expense.')}</p></div></div><div class="g c2">${S.accs.map(a=>`<div class=cd><div class=ft><span class=cb>${SYM[a.cur]}</span><b style="flex:1;margin-inline:10px">${a.n}</b><span class=bc>${_({cash:'نقدية|Cash',bank:'بنك|Bank',wallet:'محفظة|Wallet',savings:'ادخار|Savings',other:'أخرى|Other'}[a.t])}</span></div><b class=n data-n=${bal(a)} style="font-size:22px">${fm(bal(a),a.cur)}</b>${S.tx.filter(r=>eff(r,a.id)).sort((x,y)=>y.d.localeCompare(x.d)).slice(0,3).map(r=>`<div class=row>${r.d}<span>${lab(r)}</span><b>${fm(r.a,r.c)}</b></div>`).join('')}<button class=bt style="margin-top:8px" data-a=da data-v=${a.id}>${_('حذف|Delete')}</button></div>`).join('')}</div>`;
+PG.accounts=()=>`${hd('أموالك في كل مكان|All your money','النقد والبنوك والمحافظ في مكان واحد|Cash, banks and wallets together',addb('acc','حساب جديد|New account')+`<button class=bt data-a=add data-v=trf>⇄ ${_('تحويل|Transfer')}</button>`)}<div class="g c2"><div class=cd><h4>${_('التوزيع|Distribution')}</h4>${donut(S.accs.map((a,i)=>({l:a.n,v:Math.max(0,balB(a)),c:PAL[i+2]})))}</div><div class=cd><h4>${_('إجمالي الأرصدة|Total balance')}</h4><b class=n data-n=${accT()} style="font-size:28px">${fm(accT())}</b><p class=bc>${_('التحويل بين الحسابات لا يُحتسب دخلًا ولا مصروفًا.|Transfers are never counted as income or expense.')}</p></div></div><div class="g c2">${S.accs.filter(a=>!a.archived).map(a=>`<div class=cd><div class=ft><span class=cb>${SYM[a.cur]}</span><b style="flex:1;margin-inline:10px">${a.n}</b><span class=bc>${_({cash:'نقدية|Cash',bank:'بنك|Bank',wallet:'محفظة|Wallet',savings:'ادخار|Savings',other:'أخرى|Other'}[a.t])}</span></div><b class=n data-n=${bal(a)} style="font-size:22px">${fm(bal(a),a.cur)}</b>${S.tx.filter(r=>eff(r,a.id)).sort((x,y)=>y.d.localeCompare(x.d)).slice(0,3).map(r=>`<div class=row>${r.d}<span>${lab(r)}</span><b>${fm(r.a,r.c)}</b></div>`).join('')}<button class=bt style="margin-top:8px" data-a=da data-v=${a.id}>${_('أرشفة|Archive')}</button></div>`).join('')}</div>${S.accs.some(a=>a.archived)?`<h3>${_('حسابات مؤرشفة|Archived accounts')}</h3><div class="g c2">${S.accs.filter(a=>a.archived).map(a=>`<div class=cd><b>${a.n}</b><small class=bc>${fm(bal(a),a.cur)}</small><button class=bt data-a=restoreWallet data-v=${a.id}>${_('استعادة|Restore')}</button></div>`).join('')}</div>`:''}`;
 PG.budgets=()=>`${hd('تحكم في الإنفاق|Control spending','حدد سقفًا لكل تصنيف وتابع الاستهلاك|Set a limit per category and watch usage',addb('bud','ميزانية جديدة|New budget'))}<div class="g c2">${S.bud.map(b=>{const l=cv(b.l,b.cur),s=spent(b),p=s/l*100,col=p>=90?'#c2453d':'var(--g)';return `<div class=cd><div class=ft><b>${b.name||_(CAT[b.ci])}</b><span class=bc>${_({m:'شهرية|Monthly',w:'أسبوعية|Weekly',y:'سنوية|Yearly'}[b.p])}</span></div><small class=bc>${_(CAT[b.ci])}${b.accountId?' · '+nm(S.accs,b.accountId):''}</small><div style="position:relative">${pb(p,col,'fl')}${[50,75,90].map(t=>`<i style="position:absolute;top:-2px;inset-inline-start:${t}%;height:13px;width:1px;background:var(--mut)"></i>`).join('')}</div><div class=ft style="margin-top:6px"><span>${fm(s)} / ${fm(l)}</span><b style="color:${col}">${p.toFixed(0)}%</b></div><small class=bc>${_('المتبقي|Left')} ${fm(Math.max(0,l-s))}</small> <button class=ib data-a=db data-v=${b.id}>✕</button></div>`}).join('')}</div>`;
 function reportRows(){const r=R,y=S.year,f=x=>(!r.c||x.c==r.c)&&(!r.k||x.cat==r.k)&&(!+r.m||+x.d.slice(5,7)==+r.m);const per=t=>{const a=Array(12).fill(0),n=Array(12).fill(0);S.tx.filter(x=>x.t==t&&+x.d.slice(0,4)==y&&f(x)).forEach(x=>{a[+x.d.slice(5,7)-1]+=B(x);n[+x.d.slice(5,7)-1]++});return[a,n]};
 const keep=i=>!+r.m||i==r.m-1;
@@ -862,9 +862,9 @@ ed(id){
  if(r.t==='inc')f.push(['cat',_('مصدر الدخل|Income source'),'s',SRC.map((s,i)=>[i,_(s)]),r.cat]);
  if(r.t==='exp')f.push(['cat',_('تصنيف المصروف|Expense category'),'s',CAT.map((s,i)=>[i,_(s)]),r.cat]);
  if(r.t==='trf')f.push(['ref',_('الحساب المستلم|Destination account'),'s',AO(),r.ref],['ta',_('المبلغ الذي يصل للحساب المستلم|Amount received'),'number',,r.ta==null?Math.abs(Number(r.a)):r.ta]);
- if(r.t==='sav')f.push(['flow',_('نوع الحركة|Movement'),'s',[['in',_('إيداع في الادخار|Deposit to savings')],['out',_('سحب من الادخار|Withdraw from savings')]],Number(r.a)<0?'out':'in'],['ref',_('هدف الادخار|Savings goal'),'s',S.goals.map(g=>[g.id,g.n]),r.ref]);
- if(r.t==='pay')f.push(['ref',_('القرض أو الدين|Loan or debt'),'s',S.loans.map(l=>[l.id,l.n]),r.ref]);
- if(r.t==='buy'||r.t==='sell')f.push(['ref',_('الأصل الاستثماري|Investment asset'),'s',S.inv.map(a=>[a.id,a.n]),r.ref],['q',_('الكمية|Quantity'),'number',,r.q||'']);
+ if(r.t==='sav')f.push(['flow',_('نوع الحركة|Movement'),'s',[['in',_('إيداع في الادخار|Deposit to savings')],['out',_('سحب من الادخار|Withdraw from savings')]],Number(r.a)<0?'out':'in'],['ref',_('هدف الادخار|Savings goal'),'s',S.goals.filter(g=>!g.archived).map(g=>[g.id,g.n]),r.ref]);
+ if(r.t==='pay')f.push(['ref',_('القرض أو الدين|Loan or debt'),'s',S.loans.filter(l=>!l.archived).map(l=>[l.id,l.n]),r.ref]);
+ if(r.t==='buy'||r.t==='sell')f.push(['ref',_('الأصل الاستثماري|Investment asset'),'s',S.inv.filter(a=>!a.archived).map(a=>[a.id,a.n]),r.ref],['q',_('الكمية|Quantity'),'number',,r.q||'']);
  f.push(['note',_('الوصف|Description'),'text',,r.note||'']);
  if(r.t==='inc'||r.t==='exp')f.push(['rec',_('مصروف/دخل متكرر|Recurring'),'checkbox',,!!r.rec]);
  form(_('تعديل المعاملة|Edit transaction'),f,async v=>{
@@ -891,7 +891,23 @@ ed(id){
   return true;
  })
 },
-el(id){if(CLOUD_USER)return toast(_('هذا الإجراء الإداري غير متاح بعد على السجلات السحابية.|This management action is not enabled for cloud records yet.'));const l=S.loans.find(z=>z.id==id);form(_('تعديل القرض|Edit loan'),[['n',_('الجهة أو الشخص|Lender / person'),'text',,l.n],['rate',_('الفائدة %|Rate %'),'number',,l.rate],['due',_('تاريخ الاستحقاق|Due date'),'date',,l.due],['inst',_('قيمة القسط|Installment'),'number',,l.inst],['cnt',_('عدد الأقساط|Installments'),'number',,l.cnt]],v=>{if(!v.n){toast(_('الاسم مطلوب|Name required'));return false}Object.assign(l,{n:v.n,rate:v.rate,due:v.due,inst:+v.inst||0,cnt:+v.cnt||0})})},
+el(id){
+ const l=S.loans.find(z=>String(z.id)===String(id));if(!l)return;
+ form(_('تعديل القرض|Edit loan'),[
+  ['n',_('الجهة أو الشخص|Lender / person'),'text',,l.n],
+  ['rate',_('الفائدة %|Rate %'),'number',,l.rate],
+  ['start',_('تاريخ البداية|Start date'),'date',,l.start||''],
+  ['due',_('تاريخ الاستحقاق|Due date'),'date',,l.due||''],
+  ['inst',_('قيمة القسط|Installment'),'number',,l.inst],
+  ['cnt',_('عدد الأقساط|Installments'),'number',,l.cnt]
+ ],async v=>{
+  const rate=Number(v.rate)||0,inst=Number(v.inst)||0,cnt=Number(v.cnt)||0;
+  if(!String(v.n||'').trim()||rate<0||inst<0||cnt<0||!Number.isInteger(cnt)){toast(_('تحقق من الاسم والفائدة والقسط وعدد الأقساط.|Check name, rate, installment and count.'));return false;}
+  if(CLOUD_USER){await cloudManageItem('loan',id,'update',{name:v.n.trim(),interest_rate:rate,start_date:v.start||null,due_date:v.due||null,installment_amount:inst,installment_count:cnt});toast(_('تم تحديث بيانات القرض.|Loan details updated.'));}
+  else Object.assign(l,{n:v.n.trim(),rate:String(rate),start:v.start||'',due:v.due||'',inst,cnt});
+  return true;
+ })
+},
 lv(){live(1)},goldRange(v){GOLD_RANGE=Math.max(12,Math.min(60,Number(v)||30));GOLD_SELECTED=-1;build()},goldPoint(v){GOLD_SELECTED=Number(v);build()},mo(v){MO=+v;NA=1;build();NA=0},af(v){AF=v;build()},swp(){[EX.f,EX.t]=[EX.t,EX.f];build()},gold(){form(_('سعر الأونصة بالدولار|Spot price per oz (USD)'),[['p',_('السعر|Price'),'number',,S.gold.usd.toFixed(2)]],v=>{if(!(+v.p>0))return false;S.gold={...S.gold,usd:+v.p,t:new Date().toISOString(),src:'manual'};goldRecordObservation(+v.p,S.gold.t,'manual')})},th(v){S.th=v;save();build()},thn(){const L=['gold','ruby','emerald','cobalt','violet','sunset'];S.th=L[(L.indexOf(S.th)+1)%L.length];save();build()},ct(v){S.ct=v;save();build()},auto(){S.man={};save();live(1)},srch(q){q=(q||'').toLowerCase().trim();if(!q)return;const m=S.tx.filter(r=>(lab(r)+' '+(r.note||'')+' '+r.d+' '+r.a+' '+_(TL[r.t])).toLowerCase().includes(q)).sort((a,b)=>b.d.localeCompare(a.d)).slice(0,15),o=document.createElement('div');o.className='ov';o.innerHTML=`<div class=md><h3>${_('نتائج البحث|Search results')}: ${m.length}</h3>${m.map(r=>`<div class=row>${r.d}<span class="ch2 up">${_(TL[r.t])}</span><span>${lab(r)}</span><b>${fm(r.a,r.c)}</b></div>`).join('')||`<p class=em>${_('لا نتائج|No results')}</p>`}<div class=ac><button class=bt data-a=cl>OK</button></div></div>`;document.body.append(o)},go(v){AV=v;AM=v=='signup'?'up':'in';build()},guest(){S.localGuest=true;S.auth=1;S.seen=1;S.onb=1;save();location.hash='#/home';welcome()},skip(){S.onb=1;save();AV='start';build()},onbn(){if(OB<2){OB++;DIR=1;build()}else A.skip()},ob(i){DIR=i>OB?1:-1;OB=+i;build()},
 sw(dx){if(Math.abs(dx)<50)return;const nx=(dx<0)==(S.lang!='ar'),t=OB+(nx?1:-1);if(t<0||t>2)return;DIR=nx?1:-1;OB=t;build()},eye(){const i=$('#pw');i.type=i.type=='password'?'text':'password'},
 str(v){const sc=(v.length>=8)+/[A-Z]/.test(v)+/\d/.test(v)+/[^A-Za-z0-9]/.test(v),b=$('#smb'),l=$('#sml');if(!b)return;b.style.width=(v?Math.max(12,sc*25):0)+'%';b.style.background=['#c2453d','#c2453d','#e0a63b','var(--g)','var(--g)'][sc];l.textContent=v?[_('ضعيفة|Weak'),_('ضعيفة|Weak'),_('متوسطة|Fair'),_('جيدة|Good'),_('قوية|Strong')][sc]:''},
@@ -899,13 +915,88 @@ async forgot(){if(!SB){toast(_('خدمة المصادقة غير متاحة.|Aut
 hf(v){HF=v;build()},
 async sync(){if(!CLOUD_USER)return toast(_('وضع محلي على هذا الجهاز؛ لا توجد تغييرات سحابية للمزامنة.|Local device mode; no cloud changes to sync.'));if(!navigator.onLine)return toast(_('لا يوجد اتصال بالإنترنت. تم الاحتفاظ بالتغييرات على هذا الجهاز.|No internet connection. Changes are safely stored on this device.'));try{if(!await cloudEnsureClient())throw new Error('Supabase client unavailable.');const {data,error}=await SB.auth.getSession();if(error)throw error;if(!data.session||data.session.user.id!==CLOUD_USER.id)throw new Error('Sign in to the same cloud account to sync this device.');CLOUD_USER=data.session.user;const ok=await cloudSyncPending(false,true);if(ok)toast(_('اكتملت المزامنة السحابية.|Cloud sync completed.'));build();}catch(e){toast(_('تعذرت المزامنة:|Sync failed:')+' '+(e.message||String(e)));}},async out(){if(CLOUD_USER){try{const {error}=await SB.auth.signOut();if(error)throw error;}catch(e){toast(e.message||String(e));return;}cloudClearCache();AV='start';AM='in';build();return;}S.auth=0;S.localGuest=false;AV='start';AM='in';save();build()},tologin(v){if(v=='guest'){S.localGuest=true;S.auth=1;S.seen=1;save();location.hash='#/home';build()}else{AV='login';build()}},tolanding(){AV='land';build()},am(v){AM=v;build()},login(){doLogin()},logo(v){showCsv(LIT(v=='h'?LH('#0c0d10'):LG(256)))},start(){S.name=($('#nm').value||'').trim();S.seen=1;save();location.hash='#/home';build()},so(k){SORT=k;build()},tg(k){HID[k]=!HID[k];build()},flt(l){Q=l;build()},
 hv(i){document.querySelectorAll('.vb').forEach((b,j)=>b.style.fill=j==i?'var(--ink)':'');const I=mon('inc'),E=mon('exp');$('#tip').innerHTML=`<b>${MN(+i)}</b> — <span style="color:var(--g)">${_('الدخل|Income')} ${fm(I[i])}</span> · <span style="color:#8b909a">${_('المصروفات|Expenses')} ${fm(E[i])}</span> · <span style="color:var(--ink)">${_('الصافي|Net')} ${fm(I[i]-E[i])}</span>`},
-pay(id){addTx('pay',{ref:id})},gadd(id){addTx('sav',{ref:id,m:1})},gwd(id){addTx('sav',{ref:id,m:-1})},gst(id){if(CLOUD_USER)return toast(_('هذا الإجراء الإداري غير متاح بعد على السجلات السحابية.|This management action is not enabled for cloud records yet.'));const g=S.goals.find(z=>z.id==id);g.stop=!g.stop;save();build()},
-ib(id){addTx('buy',{ref:id})},is(id){addTx('sell',{ref:id})},ip(id){if(CLOUD_USER)return toast(_('هذا الإجراء الإداري غير متاح بعد على السجلات السحابية.|This management action is not enabled for cloud records yet.'));const a=S.inv.find(z=>z.id==id);form(a.n,[['p',_('السعر الحالي|Current price')+' ('+a.cur+')','number',,a.price]],v=>{a.price=+v.p})},
-dl(id){if(CLOUD_USER)return toast(_('هذا الإجراء الإداري غير متاح بعد على السجلات السحابية.|This management action is not enabled for cloud records yet.'));if(S.tx.some(r=>r.ref==id&&r.t=='pay'))return toast(_('لا يمكن الحذف: توجد دفعات مسجلة|Has payments — can’t delete'));S.loans=S.loans.filter(z=>z.id!=id);save();build()},
-dg(id){if(CLOUD_USER)return toast(_('هذا الإجراء الإداري غير متاح بعد على السجلات السحابية.|This management action is not enabled for cloud records yet.'));const g=S.goals.find(z=>z.id==id);if(sv(g)!=0||S.tx.some(r=>r.t=='sav'&&r.ref==id))return toast(_('احذف عمليات الهدف أولًا|Remove its transactions first'));S.goals=S.goals.filter(z=>z.id!=id);save();build()},
-di(id){if(CLOUD_USER)return toast(_('هذا الإجراء الإداري غير متاح بعد على السجلات السحابية.|This management action is not enabled for cloud records yet.'));if(S.tx.some(r=>r.ref==id&&(r.t=='buy'||r.t=='sell')))return toast(_('للأصل عمليات — يُحفظ السجل المالي|Asset has records — kept for audit'));S.inv=S.inv.filter(z=>z.id!=id);save();build()},
-da(id){if(CLOUD_USER)return toast(_('هذا الإجراء الإداري غير متاح بعد على السجلات السحابية.|This management action is not enabled for cloud records yet.'));if(S.tx.some(r=>r.acc==id||r.t=='trf'&&r.ref==id)||S.accs.length<2)return toast(_('للحساب عمليات أو هو الأخير|Account has records or is the last'));S.accs=S.accs.filter(z=>z.id!=id);save();build()},
-db(id){if(CLOUD_USER)return toast(_('هذا الإجراء الإداري غير متاح بعد على السجلات السحابية.|This management action is not enabled for cloud records yet.'));S.bud=S.bud.filter(z=>z.id!=id);save();build()},
+pay(id){addTx('pay',{ref:id})},gadd(id){addTx('sav',{ref:id,m:1})},gwd(id){addTx('sav',{ref:id,m:-1})},eg(id){
+ const g=S.goals.find(z=>String(z.id)===String(id));if(!g)return;
+ form(_('تعديل هدف الادخار|Edit savings goal'),[
+  ['n',_('اسم الهدف|Goal name'),'text',,g.n],
+  ['target',_('المبلغ المستهدف|Target'),'number',,g.target],
+  ['date',_('تاريخ الهدف|Target date'),'date',,g.date||'']
+ ],async v=>{
+  const target=Number(v.target);
+  if(!String(v.n||'').trim()||!(target>0)||!Number.isFinite(target)){toast(_('أدخل اسمًا ومبلغًا مستهدفًا صحيحًا.|Enter a name and a valid target amount.'));return false;}
+  if(CLOUD_USER){await cloudManageItem('goal',id,'update',{name:v.n.trim(),target_amount:target,target_date:v.date||null});toast(_('تم تحديث هدف الادخار.|Savings goal updated.'));}
+  else Object.assign(g,{n:v.n.trim(),target,date:v.date||''});
+  return true;
+ })
+},
+async gst(id){
+ const g=S.goals.find(z=>String(z.id)===String(id));if(!g)return;
+ const paused=!g.stop;
+ try{
+  if(CLOUD_USER){await cloudManageItem('goal',id,'pause',{is_paused:paused});toast(paused?_('تم إيقاف هدف الادخار مؤقتًا.|Savings goal paused.'):_('تم استئناف هدف الادخار.|Savings goal resumed.'));}
+  else{g.stop=paused;save();build();}
+ }catch(e){toast(e.message||String(e));}
+},
+
+ib(id){addTx('buy',{ref:id})},is(id){addTx('sell',{ref:id})},ip(id){
+ const a=S.inv.find(z=>String(z.id)===String(id));if(!a)return;
+ form(_('تعديل الأصل الاستثماري|Edit investment asset'),[
+  ['n',_('اسم الأصل|Asset name'),'text',,a.n],
+  ['karat',_('العيار|Karat'),'s',[[24,'24K'],[22,'22K'],[21,'21K'],[18,'18K']],a.karat||24],
+  ['p',_('سعر الجرام اليدوي (اختياري)|Manual price per gram (optional)'),'number',,a.price==null?'':a.price]
+ ],async v=>{
+  const price=String(v.p||'').trim()===''?null:Number(v.p);
+  if(!String(v.n||'').trim()||(price!==null&&(!Number.isFinite(price)||price<0))){toast(_('تحقق من اسم الأصل والسعر.|Check asset name and price.'));return false;}
+  if(CLOUD_USER){await cloudManageItem('investment',id,'update',{name:v.n.trim(),karat:Number(v.karat),current_unit_price:price});toast(_('تم تحديث بيانات الأصل.|Investment asset updated.'));}
+  else Object.assign(a,{n:v.n.trim(),karat:Number(v.karat),price});
+  return true;
+ })
+},
+
+async dl(id){
+ const l=S.loans.find(z=>String(z.id)===String(id));if(!l)return;
+ if(!confirm(_('أرشفة هذا القرض؟ ستبقى جميع الدفعات وسجلاته محفوظة ويمكن استعادته لاحقًا.|Archive this loan? Its payments and history remain preserved, and it can be restored later.')))return;
+ try{
+  if(CLOUD_USER){await cloudManageItem('loan',id,'archive');toast(_('تمت أرشفة القرض مع الاحتفاظ بسجله.|Loan archived; its history was preserved.'));}
+  else{if(S.tx.some(r=>r.ref==id&&r.t=='pay'))return toast(_('توجد دفعات مسجلة؛ لا يمكن محو القرض من السجل المحلي.|This loan has payments and cannot be erased from the local ledger.'));S.loans=S.loans.filter(z=>z.id!=id);save();build();}
+ }catch(e){toast(e.message||String(e));}
+},
+async dg(id){
+ const g=S.goals.find(z=>String(z.id)===String(id));if(!g)return;
+ if(!confirm(_('أرشفة هذا الهدف؟ ستبقى الإيداعات والسحوبات محفوظة ولن تُحذف.|Archive this goal? Its deposits and withdrawals will remain preserved.')))return;
+ try{
+  if(CLOUD_USER){await cloudManageItem('goal',id,'archive');toast(_('تمت أرشفة هدف الادخار.|Savings goal archived.'));}
+  else{if(sv(g)!=0||S.tx.some(r=>r.t=='sav'&&r.ref==id))return toast(_('توجد عمليات ادخار مرتبطة بالهدف؛ لا يمكن محو سجله.|This goal has savings movements and cannot be erased.'));S.goals=S.goals.filter(z=>z.id!=id);save();build();}
+ }catch(e){toast(e.message||String(e));}
+},
+async di(id){
+ const a=S.inv.find(z=>String(z.id)===String(id));if(!a)return;
+ if(!confirm(_('أرشفة هذا الأصل؟ ستبقى قيمته وسجل عملياته محفوظين.|Archive this asset? Its value and transaction history will be preserved.')))return;
+ try{
+  if(CLOUD_USER){await cloudManageItem('investment',id,'archive');toast(_('تمت أرشفة الأصل مع الاحتفاظ بسجله.|Asset archived; its history was preserved.'));}
+  else{if(S.tx.some(r=>r.ref==id&&(r.t=='buy'||r.t=='sell')))return toast(_('للأصل عمليات مسجلة؛ لا يمكن محو سجله.|This asset has transactions and cannot be erased.'));S.inv=S.inv.filter(z=>z.id!=id);save();build();}
+ }catch(e){toast(e.message||String(e));}
+},
+async da(id){
+ const a=S.accs.find(z=>String(z.id)===String(id));if(!a)return;
+ if(!confirm(_('أرشفة هذا الحساب؟ ستبقى أرصدته وسجل التحويلات محفوظة.|Archive this account? Its balance and transfer history will be preserved.')))return;
+ try{
+  if(CLOUD_USER){await cloudManageItem('wallet',id,'archive');toast(_('تمت أرشفة الحساب مع الاحتفاظ بسجله.|Account archived; its history was preserved.'));}
+  else{if(S.tx.some(r=>r.acc==id||r.t=='trf'&&r.ref==id)||S.accs.length<2)return toast(_('للحساب عمليات أو أنه الحساب الأخير؛ لا يمكن حذفه.|This account has transactions or is the last account.'));S.accs=S.accs.filter(z=>z.id!=id);save();build();}
+ }catch(e){toast(e.message||String(e));}
+},
+async db(id){
+ if(!confirm(_('حذف هذه الميزانية؟ لن يتم حذف أي معاملة مالية.|Delete this budget? No financial transaction will be deleted.')))return;
+ try{
+  if(CLOUD_USER){await cloudManageItem('budget',id,'delete');toast(_('تم حذف الميزانية.|Budget deleted.'));}
+  else{S.bud=S.bud.filter(z=>z.id!=id);save();build();}
+ }catch(e){toast(e.message||String(e));}
+},
+restoreLoan(id){cloudManageItem('loan',id,'restore').then(()=>toast(_('تمت استعادة القرض.|Loan restored.'))).catch(e=>toast(e.message||String(e)));},
+restoreGoal(id){cloudManageItem('goal',id,'restore').then(()=>toast(_('تمت استعادة الهدف.|Goal restored.'))).catch(e=>toast(e.message||String(e)));},
+restoreInvestment(id){cloudManageItem('investment',id,'restore').then(()=>toast(_('تمت استعادة الأصل.|Asset restored.'))).catch(e=>toast(e.message||String(e)));},
+restoreWallet(id){cloudManageItem('wallet',id,'restore').then(()=>toast(_('تمت استعادة الحساب.|Account restored.'))).catch(e=>toast(e.message||String(e)));},
+
 csv(ts){const L=rows(ts.split(',')).map(r=>[r.d,_(TL[r.t]),lab(r),r.a,r.c,nm(S.accs,r.acc),(r.note||'').replace(/[",\n]/g,' ')].join(','));showCsv(['date,type,detail,amount,currency,account,note',...L].join('\n'))},
 rcsv(){showCsv(reportRows().map(r=>r.join(',')).join('\n'))},prn(){try{print()}catch(e){toast('Print: Ctrl/Cmd+P')}},
 async ask(q){q=String(q||'').trim();if(!q||AI_BUSY)return;const gateway=AI_CONFIG.provider==='vercel';if(!AI_CONFIG.model.trim()||(!gateway&&!AI_SESSION_KEY)){CH.push([1,q],[0,_('تحقق من إعداد النموذج ومفتاح API في إعدادات الذكاء الاصطناعي أولاً.|Check the AI model settings and API key first.')]);build();return}if(gateway&&!CLOUD_USER){CH.push([1,q],[0,_('سجّل الدخول إلى حساب WALLET OS السحابي لتفعيل المساعد الآمن.|Sign in to your WALLET OS cloud account to activate the secure assistant.')]);build();return}AI_BUSY=true;CH.push([1,q],[0,_('جارٍ إرسال السؤال إلى المساعد…|Sending your question to the assistant…')]);const ri=CH.length-1;build();try{const history=CH.slice(0,-1).slice(-12).map(m=>({role:m[0]?'user':'assistant',content:String(m[1]).slice(0,6000)}));const reply=await aiRequest([{role:'system',content:aiSystemPrompt()},...history]);CH[ri][1]=reply}catch(e){CH[ri][1]=`${_('تعذر إكمال الطلب:|Request failed:')} ${e.message||String(e)}`}finally{AI_BUSY=false;build();setTimeout(()=>scrollTo(0,document.body.scrollHeight),60)}},
@@ -1101,6 +1192,21 @@ async function cloudEditTransaction(original,v){
  return data;
 }
 
+
+async function cloudManageItem(entity,id,action,payload={}){
+ if(!CLOUD_USER)throw new Error('Sign in to your cloud account first.');
+ if(!navigator.onLine||CLOUD_OFFLINE)throw new Error('Connect to the internet before changing this record. No change was made.');
+ if(!await cloudEnsureClient())throw new Error('Supabase client is unavailable.');
+ const {data:sessionData,error:sessionError}=await SB.auth.getSession();
+ if(sessionError)throw sessionError;
+ if(!sessionData.session||sessionData.session.user.id!==CLOUD_USER.id)throw new Error('Sign in to the same cloud account before changing this record.');
+ CLOUD_USER=sessionData.session.user;
+ const {data,error}=await SB.rpc('manage_financial_item',{p_entity:entity,p_id:id,p_action:action,p_payload:payload});
+ if(error)throw error;
+ await cloudRefresh();
+ return data;
+}
+
 async function cloudCreateLegacy(snapshot,sourceId){
  await cloudLoadCategories();
  const wm=new Map(),gm=new Map(),lm=new Map(),im=new Map();
@@ -1134,9 +1240,9 @@ async function cloudRefresh(skipSync=false){
   const uid=CLOUD_USER.id,q=await Promise.all([
    SB.from('profiles').select('display_name,base_currency,language').eq('id',uid).single(),
    SB.from('wallet_account_balances').select('*').eq('user_id',uid),
-   SB.from('savings_goals').select('*').eq('user_id',uid).eq('is_archived',false),
-   SB.from('loans').select('*').eq('user_id',uid).eq('is_archived',false),
-   SB.from('investment_assets').select('id,name,asset_subtype,karat,currency_code').eq('user_id',uid).eq('is_archived',false),
+   SB.from('savings_goals').select('*').eq('user_id',uid),
+   SB.from('loans').select('*').eq('user_id',uid),
+   SB.from('investment_assets').select('id,name,asset_type,asset_subtype,karat,current_unit_price,currency_code,is_archived').eq('user_id',uid),
    SB.from('transactions').select('*').eq('user_id',uid).order('occurred_on',{ascending:true}),
    SB.from('categories').select('id,name,direction').eq('user_id',uid),
    SB.from('budgets').select('*').eq('user_id',uid),
@@ -1147,12 +1253,12 @@ async function cloudRefresh(skipSync=false){
   if(profile){S.name=profile.display_name||CLOUD_USER.user_metadata?.full_name||CLOUD_USER.email||S.name;S.base=profile.base_currency||S.base;S.lang=profile.language||S.lang;}
   CLOUD_CATEGORY_ROWS=cats;CLOUD_CATEGORY_IDS={income:CLOUD_INCOME_NAMES.map(n=>(cats.find(c=>c.direction==='income'&&c.name===n)||{}).id),expense:CLOUD_EXPENSE_NAMES.map(n=>(cats.find(c=>c.direction==='expense'&&c.name===n)||{}).id)};cloudCategoryCacheSave();
   const ci=new Map(cats.map(c=>[c.id,cloudCategoryIndex(c.id)]));
-  S.accs=accounts.map(a=>({id:a.id,n:a.name,t:a.kind==='mobile'?'wallet':a.kind,cur:a.currency_code,cloudBalance:Number(a.balance)||0}));
-  S.goals=goals.map(g=>({id:g.id,n:g.name,target:Number(g.target_amount),cur:g.currency_code,stop:false,date:g.target_date}));
-  S.loans=loans.map(l=>({id:l.id,kind:l.kind==='borrowed'?'loan':'owed',n:l.name,orig:Number(l.principal),cur:l.currency_code,rate:String(l.interest_rate||0),type:'Personal',start:l.start_date||'',due:l.due_date||'',inst:Number(l.installment_amount)||0,cnt:Number(l.installment_count)||0}));
+  S.accs=accounts.map(a=>({id:a.id,n:a.name,t:a.kind==='mobile'?'wallet':a.kind,cur:a.currency_code,cloudBalance:Number(a.balance)||0,archived:!!a.is_archived,allowOverdraft:!!a.allow_overdraft}));
+  S.goals=goals.map(g=>({id:g.id,n:g.name,target:Number(g.target_amount),cur:g.currency_code,stop:!!g.is_paused,date:g.target_date,archived:!!g.is_archived}));
+  S.loans=loans.map(l=>({id:l.id,kind:l.kind==='borrowed'?'loan':'owed',n:l.name,orig:Number(l.principal),cur:l.currency_code,rate:String(l.interest_rate||0),type:'Personal',start:l.start_date||'',due:l.due_date||'',inst:Number(l.installment_amount)||0,cnt:Number(l.installment_count)||0,archived:!!l.is_archived}));
   const openingIds=new Set(tx.filter(t=>t.type==='opening_balance'&&t.related_investment_id).map(t=>t.id)),opening=new Map();
   for(const t of trades){if(openingIds.has(t.transaction_id)){const z=opening.get(t.investment_id)||{q:0,c:0};z.q+=Number(t.quantity)||0;z.c+=Number(t.amount)||0;opening.set(t.investment_id,z);}}
-  const goldSubtypeIndex={bars:0,coins:1,jewelry:2,sovereigns:3,scrap:4,other:5};S.inv=assets.map(a=>{const z=opening.get(a.id)||{q:0,c:0};return{id:a.id,n:a.name,type:goldSubtypeIndex[a.asset_subtype]??0,karat:Number(a.karat)||24,q0:z.q,c0:z.c,cur:a.currency_code};});
+  const goldSubtypeIndex={bars:0,coins:1,jewelry:2,sovereigns:3,scrap:4,other:5};S.inv=assets.map(a=>{const z=opening.get(a.id)||{q:0,c:0};return{id:a.id,n:a.name,type:goldSubtypeIndex[a.asset_subtype]??0,karat:Number(a.karat)||24,q0:z.q,c0:z.c,cur:a.currency_code,price:a.current_unit_price==null?null:Number(a.current_unit_price),archived:!!a.is_archived};});
   const types={income:'inc',expense:'exp',transfer:'trf',saving_deposit:'sav',saving_withdrawal:'sav',loan_payment:'pay',investment_buy:'buy',investment_sell:'sell'};
   S.tx=tx.filter(t=>types[t.type]&&!t.is_voided).map(t=>{const k=types[t.type],ref=k==='trf'?t.destination_account_id:k==='sav'?t.related_goal_id:k==='pay'?t.related_loan_id:(k==='buy'||k==='sell')?t.related_investment_id:null;let amount=Number(t.amount);if(t.type==='saving_withdrawal')amount=-amount;return{id:t.id,t:k,a:amount,c:t.currency_code,d:t.occurred_on,acc:t.source_account_id,ref,cat:ci.get(t.category_id)??0,ta:t.target_amount==null?null:Number(t.target_amount),tc:t.target_currency_code||t.currency_code,fxRate:Number(t.fx_rate_to_base)||null,targetFxRate:Number(t.target_fx_rate_to_base)||null,q:t.quantity==null?undefined:Number(t.quantity),note:t.note||'',rec:!!t.is_recurring};});
   const currentMonth=new Date().getMonth()+1,currentYear=new Date().getFullYear(),currentWeek=cloudBudgetPeriod({p:'w'}).period_week;S.bud=bud.filter(b=>b.period_year===currentYear&&(b.period_type==='y'||(b.period_type==='m'&&b.period_month===currentMonth)||(b.period_type==='w'&&b.period_week===currentWeek))).map(b=>({id:b.id,ci:ci.get(b.category_id)??12,name:b.budget_name||CLOUD_EXPENSE_NAMES[ci.get(b.category_id)??12]||'Budget',accountId:b.account_id||null,l:Number(b.amount),cur:b.currency_code,p:b.period_type||'m'}));
@@ -1218,7 +1324,7 @@ else{const up=AV=='signup';AM=up?'up':'in';h=`<div class=ah>${bkb('start')}${lgb
 $('#app').innerHTML=`<div class="ph au2">${h}</div>`;document.querySelectorAll('.au2>*').forEach((e,i)=>e.style.setProperty('--i',i))}
 function landing(){return `<div class="landing-page"><div class="landing-top"><div class="brand-lockup">${LG(44)}<div><b>WALLET OS</b><small>${_('إدارة أموالك بثقة|Manage money with clarity')}</small></div></div><button class="bt gl" data-a=lang>${S.lang=='ar'?'EN':'ع'}</button></div><div class="landing-grid"><div class="landing-copy"><span class="eyebrow">${_('مساحة مالية شخصية|PERSONAL FINANCE SPACE')}</span><h1>${_('أموالك كلها، في مكان واحد.|Your money, all in one place.')}</h1><p>${_('نظّم الحسابات والدخل والمصروفات والادخار والاستثمار من لوحة واحدة، بوضوح يساعدك على اتخاذ قرارات أفضل.|Bring accounts, income, expenses, savings and investments together in one dashboard designed to make every decision clearer.')}</p><div class="landing-actions"><button class=gb data-a=tologin>${_('ابدأ الآن|Get started')}</button><button class="gb gl" data-a=tologin data-v=guest>${_('استكشف كضيف|Explore as guest')}</button></div><div class="landing-points"><span>✓ ${_('خصوصية محلية|Local privacy')}</span><span>✓ ${_('أربع عملات|Four currencies')}</span><span>✓ ${_('تقارير واضحة|Clear reports')}</span></div></div><div class="landing-art"><div class="landing-card"><small>${_('صافي الثروة|NET WORTH')}</small><b>••••••</b><div class="landing-mini-chart"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span>${_('صورة مالية أكثر وضوحًا|A clearer financial picture')}</span></div><div class="landing-float">${LG(32)} <b>WALLET OS</b></div></div></div></div>`}
 function login(){const up=AM=='up',f=(id,t,l)=>`<label>${l}<input class=in id=${id} type=${t} autocomplete=${t=='password'?(up?'new-password':'current-password'):id=='em'?'email':'name'}></label>`;return `<div class=au><canvas id=hc></canvas><div class=ct><form class=glass onsubmit="event.preventDefault();A.login()"><div class=lg style="padding:0;justify-content:center">${LG(40)}<span>WALLET OS</span></div><div class=cht style="justify-content:center"><button type=button class="bt ${up?'':'gon'}" data-a=am data-v=in>${_('دخول|Sign in')}</button><button type=button class="bt ${up?'gon':''}" data-a=am data-v=up>${_('حساب جديد|Create account')}</button></div>${up?f('un','text',_('الاسم|Name')):''}${f('em','email',_('البريد الإلكتروني|Email'))}${f('pw','password',_('كلمة المرور|Password'))}<button class=gb>${up?_('إنشاء الحساب|Create account'):_('دخول|Sign in')}</button><button type=button class="gb gl" data-a=tologin data-v=guest>${_('متابعة كضيف|Continue as guest')}</button><small>${_('الحساب محلي على هذا الجهاز ولا يُرسل لأي خادم قبل ربط Supabase.|Secure cloud sign-in; financial records sync to your account.')}</small><button type=button class="bt gl" data-a=tolanding>${S.lang=='ar'?'→':'←'}</button></form></div></div>`}
-const OZ=31.1034768,PUR={24:.999,22:.9167,21:.875,18:.75},gUSDg=()=>Number(S.gold.gramUsd)>0?Number(S.gold.gramUsd):S.gold.usd/OZ,gp=a=>cv(gUSDg()*(PUR[a.karat||24]||.999),'USD',a.cur);
+const OZ=31.1034768,PUR={24:.999,22:.9167,21:.875,18:.75},gUSDg=()=>Number(S.gold.gramUsd)>0?Number(S.gold.gramUsd):S.gold.usd/OZ,gp=a=>a.price!==null&&a.price!==undefined&&Number.isFinite(Number(a.price))?Number(a.price):cv(gUSDg()*(PUR[a.karat||24]||.999),'USD',a.cur);
 const GT=['سبائك ذهب|Gold bars','عملات ذهبية|Gold coins','مشغولات ذهبية|Jewelry','جنيه / ليرة ذهب|Sovereigns','ذهب كسر|Scrap gold','أخرى|Other'];
 let LV={ok:0,fail:0,fx:0,fxTry:0,fxOK:0,dir:0},NA=0,PREV={},FIRST=1,LASTID=0,GOLD_RANGE=30,GOLD_SELECTED=-1;
 async function jf(u){const c=new AbortController(),t=setTimeout(()=>c.abort(),8000);try{const r=await fetch(u,{signal:c.signal,cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(t)}}
