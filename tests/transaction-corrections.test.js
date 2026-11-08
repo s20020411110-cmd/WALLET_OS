@@ -138,8 +138,8 @@ test('cloud edits preserve financial ledger balances by changing profile metadat
 test('archived records remain loaded for transaction history and balances, while selectors show active records only', () => {
   assert.match(html, /SB\.from\('loans'\)\.select\('\*'\)\.eq\('user_id',uid\)/);
   assert.match(html, /SB\.from\('savings_goals'\)\.select\('\*'\)\.eq\('user_id',uid\)/);
-  assert.match(html, /is_archived:!!l\.is_archived/);
-  assert.match(html, /is_paused:!!g\.is_paused/);
+  assert.match(html, /archived:!!l\.is_archived/);
+  assert.match(html, /stop:!!g\.is_paused/);
   assert.match(html, /const AO=\(\)=>S\.accs\.filter\(a=>!a\.archived\)/);
   assert.match(html, /NW=\(\)=>accT\(\)\+savT\(\)\+invV\(\)\+Z\(S\.loans\.filter/);
 });
@@ -147,4 +147,14 @@ test('archived records remain loaded for transaction history and balances, while
 test('manual investment unit prices persist in the cloud and override spot-derived gram values only when set', () => {
   assert.match(html, /current_unit_price/);
   assert.match(html, /a\.price!==null&&a\.price!==undefined&&Number\.isFinite\(Number\(a\.price\)\)/);
+});
+
+
+test('cloud management function stays outside the exposed API schema and the public RPC is invoker-secured', () => {
+  const migration = fs.readFileSync(path.join(__dirname, '..', 'supabase', 'wallet_os_cloud_management_security_hardening_v1.sql'), 'utf8');
+  assert.match(migration, /create or replace function private\.manage_financial_item_impl/);
+  assert.match(migration, /security definer[\s\S]*auth\.uid\(\)/);
+  assert.match(migration, /create or replace function public\.manage_financial_item[\s\S]*security invoker/);
+  assert.match(migration, /revoke all on function public\.manage_financial_item/);
+  assert.match(migration, /grant execute on function public\.manage_financial_item[\s\S]*to authenticated/);
 });
