@@ -117,7 +117,7 @@ test('home dashboard separates seven categories and uses correct asset/income ra
   assert.doesNotMatch(home, /wallet-spark|income & expenses|debts & loans|class=tcs/);
 });
 
-test('ledger calculations keep transfers and savings neutral and include archived liabilities in gross assets', () => {
+test('ledger calculations keep transfers and savings neutral and include all retained liabilities in gross assets', () => {
   const start = html.indexOf('const eff=');
   const end = html.indexOf('const chg=', start);
   assert.ok(start >= 0 && end > start, 'financial calculation helpers should exist');
@@ -171,7 +171,7 @@ test('ledger calculations keep transfers and savings neutral and include archive
   assert.equal(position.pl + position.v - position.c, 160);
   assert.equal(state.tx.filter(tx => tx.t === 'inc').reduce((v, tx) => v + tx.a, 0), 1000);
   assert.equal(state.tx.filter(tx => tx.t === 'exp').reduce((v, tx) => v + tx.a, 0), 200);
-  assert.equal(helpers.LN().length, 1, 'archived loan is hidden from active loan lists');
+  assert.equal(helpers.LN().length, 2, 'all retained loans remain visible when archive is not a user workflow');
 });
 
 test('savings report calculates the monthly savings rate as net savings divided by income', () => {
@@ -198,12 +198,12 @@ test('home wealth cards use separate semantic gradients blended with the selecte
   assert.match(html, /color-mix\(in srgb,var\(--wallet-tone\) 17%,var\(--c\)\)/);
   assert.match(html, /linear-gradient\(90deg,var\(--wallet-tone\),var\(--g2\)\)/);
 });
-test('investment page exposes transaction editing and reversal deletion beside the asset list', () => {
+test('investment page exposes editing and permanent deletion beside the asset list', () => {
   assert.match(investmentPage, /investment-history/);
   assert.match(investmentPage, /data-a=ed data-v=/);
   assert.match(investmentPage, /data-a=del data-v=/);
   assert.match(investmentPage, /سجل عمليات الاستثمار\|Investment transaction history/);
-  assert.match(html, /SB\.rpc\('void_financial_transaction'/);
+  assert.match(html, /SB\.rpc\('delete_financial_transaction'/);
   assert.match(html, /SB\.rpc\('edit_financial_transaction'/);
 });
 
@@ -216,7 +216,6 @@ test('investment edits and permanent deletion validate dependencies before remov
   assert.match(html, /mode==='delete_asset'/);
   assert.match(html, /SB\.rpc\('delete_investment_data'/);
   assert.match(html, /Permanently delete this asset/);
-  assert.match(html, /Permanently delete this investment operation/);
 });
 
 test('investment assets provide edit and permanent delete only, with no archive or restore controls', () => {
@@ -232,7 +231,7 @@ test('investment assets provide edit and permanent delete only, with no archive 
 });
 
 
-test('investment transaction deletion is permanent for buys and sells, while other ledger deletions stay audited reversals', () => {
+test('investment and other transaction deletions use permanent database deletion paths', () => {
   const actionsStart = html.indexOf('const A={');
   const deleteStart = html.indexOf('async del(id){', actionsStart);
   const editStart = html.indexOf('\ned(id){', deleteStart);
@@ -243,9 +242,10 @@ test('investment transaction deletion is permanent for buys and sells, while oth
   assert.match(deleteHandler, /purgeInvestmentLocalCopies\(\[\], \[r\.id\], null\)/);
   assert.match(deleteHandler, /if\(!confirm\(prompt\)\)return/);
   assert.match(deleteHandler, /delete this investment operation/);
-  assert.match(deleteHandler, /void_financial_transaction/);
+  assert.match(deleteHandler, /SB\.rpc\('delete_financial_transaction'/);
+  assert.doesNotMatch(deleteHandler, /void_financial_transaction/);
   assert.match(html, /Permanently delete this asset/);
-  assert.match(html, /Permanently delete this investment operation/);
+  
 });
 
 
