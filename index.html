@@ -1598,9 +1598,14 @@ return `${empty?`<div class=cd style="text-align:center"><h3>${_('ابدأ بت�
 <div class=qas>${[['inc','↗','دخل|Income'],['exp','↘','مصروف|Expense'],['trf','⇄','تحويل|Transfer']].map(a=>`<button class=qa data-a=add data-v=${a[0]}><span>${a[1]}</span><small>${_(a[2])}</small></button>`).join('')}<a class=qa href="#/exchange"><span>$</span><small>${_('صرف|Exchange')}</small></a></div>
 <div class="g c2 wallet-overview">
 ${(()=>{
- const wealth=NW(),ratio=value=>wealth>0?Math.abs(Number(value)||0)/wealth*100:null;
+ const assets=NW()+Z(S.loans.map(rem));
+ const ratio=(key,value)=>{
+  const denominator=key==='income'||key==='expenses'?I[c]:assets;
+  if(!(denominator>0))return null;
+  return key==='income'?100:Math.abs(Number(value)||0)/denominator*100;
+ };
  const card=(key,title,value,sub,href,icon)=>{
-  const amount=Number(value)||0,share=ratio(amount),width=share===null?0:Math.min(100,share);
+  const amount=Number(value)||0,share=ratio(key,amount),width=share===null?0:Math.min(100,share);
   const shareText=share===null?'—':share.toFixed(1)+'%';
   return `<a class="cd wallet-card wallet-${key}" href="#/${href}">
    <div class="wallet-card-head"><span class="wallet-glyph">${icon}</span><b>${title}</b><strong>${shareText}</strong></div>
@@ -1610,13 +1615,13 @@ ${(()=>{
   </a>`;
  };
  return [
-  card('accounts',_('الحسابات|Accounts'),accT(),_('أرصدة الحسابات الحالية|Current account balances'),'accounts','▣'),
-  card('income',_('الدخل|Income'),I[c],_('دخل الشهر|Income this month'),'income','↗'),
-  card('expenses',_('المصروفات|Expenses'),E[c],_('مصروفات الشهر|Expenses this month'),'expenses','↘'),
-  card('investment',_('الاستثمار|Investments'),invV(),_('القيمة الحالية للمحفظة|Current portfolio value'),'invest','◈'),
-  card('debts',_('الديون|Receivables'),Z(OW().map(rem)),_('مبالغ مستحقة لك|Money owed to you'),'loans','＋'),
-  card('loans',_('القروض|Loans'),Z(LN().map(rem)),_('مبالغ مستحقة عليك|Outstanding loans'),'loans','−'),
-  card('savings',_('الادخار|Savings'),savT(),_('إجمالي المدخرات|Total savings'),'savings','◎')
+  card('accounts',_('الحسابات|Accounts'),accT(),_('أرصدة الحسابات · نسبة من الأصول|Account balances · share of assets'),'accounts','▣'),
+  card('income',_('الدخل|Income'),I[c],_('دخل الشهر · الأساس المرجعي 100%|Monthly income · 100% baseline'),'income','↗'),
+  card('expenses',_('المصروفات|Expenses'),E[c],_('مصروفات الشهر · نسبة من الدخل|Monthly expenses · share of income'),'expenses','↘'),
+  card('investment',_('الاستثمار|Investments'),invV(),_('القيمة الحالية · نسبة من الأصول|Current value · share of assets'),'invest','◈'),
+  card('debts',_('الديون|Receivables'),Z(OW().map(rem)),_('مبالغ مستحقة لك · نسبة من الأصول|Receivables · share of assets'),'loans','＋'),
+  card('loans',_('القروض|Loans'),Z(LN().map(rem)),_('مبالغ مستحقة عليك · نسبة من الأصول|Loans · share of assets'),'loans','−'),
+  card('savings',_('الادخار|Savings'),savT(),_('إجمالي المدخرات · نسبة من الأصول|Savings balance · share of assets'),'savings','◎')
  ].join('');
 })()}
 </div>
