@@ -37,7 +37,7 @@ test('duplicate standalone request-key indexes are cleaned up without dropping t
     'uq_investment_assets_request',
     'uq_loans_request',
     'uq_savings_goals_request'
-  ]) assert.match(migration, new RegExp('drop index if exists public\\\\.' + name, 'i'));
+  ]) assert.ok(migration.toLowerCase().includes('drop index if exists public.' + name.toLowerCase()), 'missing duplicate index drop: ' + name);
   assert.doesNotMatch(migration, /drop index if exists public\.(budgets_user_period_unique|investment_assets_user_request_key_unique|loans_user_request_key_unique|savings_goals_user_request_key_unique)/i);
 });
 
