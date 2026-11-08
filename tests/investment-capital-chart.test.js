@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
@@ -99,6 +100,55 @@ test('home dashboard separates seven categories and uses correct asset/income ra
   assert.match(home, /Z\(OW\(\)\.map\(rem\)\)/);
   assert.match(home, /Z\(LN\(\)\.map\(rem\)\)/);
   assert.doesNotMatch(home, /wallet-spark|income & expenses|debts & loans|class=tcs/);
+});
+
+test('ledger calculations keep transfers and savings neutral and include archived liabilities in gross assets', () => {
+  const start = html.indexOf('const eff=');
+  const end = html.indexOf('function pos(a)', start);
+  assert.ok(start >= 0 && end > start, 'financial calculation helpers should exist');
+  const source = html.slice(start, end);
+  const state = {
+    base: 'USD',
+    accs: [
+      { id: 'cash-usd', cur: 'USD' },
+      { id: 'cash-eur', cur: 'EUR' }
+    ],
+    goals: [{ id: 'goal-1' }],
+    inv: [],
+    loans: [
+      { id: 'debt-1', kind: 'loan', orig: 200, cur: 'USD' },
+      { id: 'debt-archived', kind: 'loan', orig: 40, cur: 'USD', archived: true },
+      { id: 'receivable-1', kind: 'owed', orig: 120, cur: 'USD' }
+    ],
+    tx: [
+      { id: '1', t: 'inc', a: 1000, c: 'USD', acc: 'cash-usd' },
+      { id: '2', t: 'exp', a: 200, c: 'USD', acc: 'cash-usd' },
+      { id: '3', t: 'trf', a: 100, c: 'USD', ta: 90, tc: 'EUR', acc: 'cash-usd', ref: 'cash-eur' },
+      { id: '4', t: 'sav', a: 100, c: 'USD', acc: 'cash-usd', ref: 'goal-1' },
+      { id: '5', t: 'sav', a: -20, c: 'USD', acc: 'cash-usd', ref: 'goal-1' },
+      { id: '6', t: 'pay', a: 50, c: 'USD', acc: 'cash-usd', ref: 'debt-1' },
+      { id: '7', t: 'pay', a: 30, c: 'USD', acc: 'cash-usd', ref: 'receivable-1' }
+    ]
+  };
+  const rates = { USD: 1, EUR: 100 / 90 };
+  const cv = (amount, from, to = 'USD') => Number(amount) * rates[from] / rates[to];
+  const sum = values => values.reduce((total, value) => total + Number(value || 0), 0);
+  const Z = values => sum(values);
+  const helpers = vm.runInNewContext(source + ';({eff,bal,balB,rem,LN,OW,sv,savT,accT,NW})', {
+    S: state, CLOUD_USER: null, cv, sum, Z
+  });
+  assert.equal(helpers.bal(state.accs[0]), 600);
+  assert.equal(helpers.bal(state.accs[1]), 90);
+  assert.equal(helpers.savT(), 80);
+  assert.equal(helpers.rem(state.loans[0]), 150);
+  assert.equal(helpers.rem(state.loans[1]), 40);
+  assert.equal(helpers.rem(state.loans[2]), 90);
+  assert.equal(helpers.NW(), 680);
+  const grossAssets = helpers.NW() + Z(state.loans.filter(loan => loan.kind !== 'owed').map(helpers.rem));
+  assert.equal(grossAssets, 870);
+  assert.equal(state.tx.filter(tx => tx.t === 'inc').reduce((v, tx) => v + tx.a, 0), 1000);
+  assert.equal(state.tx.filter(tx => tx.t === 'exp').reduce((v, tx) => v + tx.a, 0), 200);
+  assert.equal(helpers.LN().length, 1, 'archived loan is hidden from active loan lists');
 });
 
 test('savings report calculates the monthly savings rate as net savings divided by income', () => {
