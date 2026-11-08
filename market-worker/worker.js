@@ -48,6 +48,8 @@ class GoldMarketWorker {
     this.fallbackTimer = null;
     this.leaseTimer = null;
     this.healthServer = null;
+    this.connectTimer = null;
+    this.statusTimer = null;
     this.started = false;
     this.stopping = false;
     this.leaseHeld = false;
@@ -150,6 +152,10 @@ class GoldMarketWorker {
       connection_status: connection,
       freshness_state: freshness,
       source: quote ? quote.source : null,
+      price_usd_oz: quote ? quote.price_usd_oz : null,
+      price_usd_gram: quote ? quote.price_usd_gram : null,
+      bid_usd_oz: quote ? quote.bid_usd_oz : null,
+      ask_usd_oz: quote ? quote.ask_usd_oz : null,
       provider_timestamp: quote ? quote.provider_timestamp : null,
       received_at: quote ? quote.received_at : null,
       server_time: new Date(now).toISOString(),
@@ -295,7 +301,7 @@ class GoldMarketWorker {
       return;
     }
     this.ws = socket;
-    const connectTimer = this.setTimeout(() => {
+    this.connectTimer = this.setTimeout(() => {
       if (this.ws === socket && !this.subscriptionActive) {
         this.primaryStatus = 'connect-timeout';
         try { socket.close(); } catch (_) {}
@@ -334,7 +340,8 @@ class GoldMarketWorker {
     });
 
     socket.addEventListener('close', () => {
-      this.clearTimeout(connectTimer);
+      if (this.connectTimer) this.clearTimeout(this.connectTimer);
+      this.connectTimer = null;
       if (this.ws !== socket) return;
       this.ws = null;
       this.subscriptionActive = false;
@@ -366,6 +373,8 @@ class GoldMarketWorker {
       const failure = Array.isArray(message.fails) &&
         message.fails.some(item => String(item && item.symbol || '').toUpperCase() === INSTRUMENT);
       if (message.status === 'ok' && success && !failure) {
+        if (this.connectTimer) this.clearTimeout(this.connectTimer);
+        this.connectTimer = null;
         this.primaryStatus = 'subscribed';
         this.subscriptionActive = true;
         this.publishStatus({ force: true }).catch(() => {});
@@ -445,6 +454,17 @@ class GoldMarketWorker {
         return goldApi;
       }
 
+      const staleCandidate = candidates
+        .filter(q => q && q.freshness_state === 'stale')
+        .sort((a, b) => Date.parse(b.provider_timestamp) - Date.parse(a.provider_timestamp))[0];
+      if (staleCandidate && (!this.latestQuote ||
+          Date.parse(staleCandidate.provider_timestamp) > Date.parse(this.latestQuote.provider_timestamp))) {
+        this.latestQuote = staleCandidate;
+        this.activeSource = staleCandidate.source;
+        this.lastFingerprint = [staleCandidate.source, staleCandidate.provider_timestamp, staleCandidate.price_usd_oz].join('|');
+        this.lastProviderTimestampMs = Date.parse(staleCandidate.provider_timestamp);
+        await this.broadcast(PRICE_EVENT, staleCandidate);
+      }
       const old = this.latestQuote;
       if (old) {
         old.freshness_state = 'stale';
@@ -496,6 +516,7 @@ class GoldMarketWorker {
     }
     this.startHealthServer();
     this.leaseTimer = this.setInterval(() => this.renewLease().catch(() => {}), LEASE_RENEW_MS);
+    this.statusTimer = this.setInterval(() => this.publishStatus({ force: true }).catch(() => {}), 15_000);
     this.fallbackTimer = this.setInterval(() => this.runFallback().catch(error =>
       this.log.error('[gold-worker] fallback cycle failed:', error.message)), this.fallbackIntervalMs);
     await this.publishStatus({ force: true });
@@ -511,7 +532,9 @@ class GoldMarketWorker {
     if (this.heartbeatTimer) this.clearInterval(this.heartbeatTimer);
     if (this.fallbackTimer) this.clearInterval(this.fallbackTimer);
     if (this.leaseTimer) this.clearInterval(this.leaseTimer);
-    this.reconnectTimer = this.heartbeatTimer = this.fallbackTimer = this.leaseTimer = null;
+    if (this.statusTimer) this.clearInterval(this.statusTimer);
+    if (this.connectTimer) this.clearTimeout(this.connectTimer);
+    this.reconnectTimer = this.heartbeatTimer = this.fallbackTimer = this.leaseTimer = this.statusTimer = this.connectTimer = null;
     const socket = this.ws;
     this.ws = null;
     if (socket) { try { socket.close(1000, 'worker shutdown'); } catch (_) {} }
