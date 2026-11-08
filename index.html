@@ -488,6 +488,38 @@ button,input,select,textarea{font:inherit}
 @media(max-width:560px){.capital-line-chart{min-height:185px}.capital-axis-label,.capital-x-label{font-size:9px}.capital-selection-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.capital-selection{padding:10px}.capital-line-legend{gap:12px;font-size:10px}}
 @media(prefers-reduced-motion:reduce){.capital-series,.capital-dot{animation:none!important;transition:none!important}}
 
+
+/* Focused wealth cards: category hues blend with the selected theme accent. */
+.wallet-overview{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.wallet-card{--wallet-accent:var(--g);--wallet-tone:color-mix(in srgb,var(--wallet-accent) 72%,var(--g) 28%);display:flex;flex-direction:column;gap:7px;padding:13px!important;border:1px solid color-mix(in srgb,var(--wallet-tone) 28%,var(--ln))!important;border-radius:18px!important;background:linear-gradient(145deg,color-mix(in srgb,var(--wallet-tone) 17%,var(--c)),color-mix(in srgb,var(--g2) 8%,var(--bg)))!important;min-height:132px;transition:transform .2s,border-color .2s,background .25s}
+.wallet-accounts{--wallet-accent:#64748b}.wallet-income{--wallet-accent:#16a34a}.wallet-expenses{--wallet-accent:#dc2626}.wallet-investment{--wallet-accent:#0ea5e9}.wallet-debts{--wallet-accent:#d97706}.wallet-loans{--wallet-accent:#8b5cf6}.wallet-savings{--wallet-accent:#0d9488}
+.wallet-card-head{display:flex;align-items:center;gap:7px;min-width:0}
+.wallet-card-head b{font-size:12px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wallet-glyph{width:25px;height:25px;flex:none;display:grid;place-items:center;border-radius:9px;background:color-mix(in srgb,var(--wallet-tone) 17%,transparent);color:var(--wallet-tone);font-size:14px;font-weight:700}
+.wallet-card-head strong{margin-inline-start:auto;font-size:11px;font-weight:750;color:var(--wallet-tone);font-variant-numeric:tabular-nums;white-space:nowrap}
+.wallet-value{font-size:clamp(15px,3.4vw,20px)!important;font-weight:750!important;margin:2px 0 0!important;line-height:1.3;overflow-wrap:anywhere}
+.wallet-sub{font-size:10px;color:var(--mut);line-height:1.35;min-height:14px}
+.wallet-share-track{display:block;margin-top:auto;height:4px;border-radius:99px;background:color-mix(in srgb,var(--wallet-tone) 16%,var(--ln));overflow:hidden}
+.wallet-share-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--wallet-tone),var(--g2));transition:width .35s ease}
+.wallet-card:active{transform:scale(.985)}
+@media(max-width:360px){.wallet-overview{grid-template-columns:1fr}.wallet-card{min-height:118px}}
+/* One uncomplicated P/L chart, with a clear zero line and sign-colored points. */
+.portfolio-pl-card{display:grid;gap:12px}
+.portfolio-pl-card h4{margin:0!important;color:var(--ink)!important}
+.portfolio-pl-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.portfolio-pl-summary>div{display:grid;gap:4px;padding:11px 13px;border-radius:14px;background:var(--c)}
+.portfolio-pl-summary small{font-size:11px;color:var(--mut)}
+.portfolio-pl-summary b{font-size:18px;font-weight:750;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.portfolio-pl-summary .pl-profit b{color:#16a34a}.portfolio-pl-summary .pl-loss b{color:#dc2626}
+.portfolio-pl-chart{display:block;width:100%;height:auto;overflow:visible;direction:ltr}
+.pl-grid-line{stroke:var(--ln);stroke-width:1;opacity:.65}.pl-zero-line{stroke:var(--mut);stroke-width:1.4;stroke-dasharray:4 4;opacity:.85}
+.portfolio-pl-line{fill:none;stroke:var(--g);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;animation:capitalLineDraw 1s ease-out both}
+.portfolio-pl-point{stroke:var(--bg);stroke-width:2.5}
+.portfolio-pl-point.profit{fill:#16a34a}.portfolio-pl-point.loss{fill:#dc2626}.portfolio-pl-point.neutral{fill:var(--g)}
+.portfolio-pl-label{fill:var(--mut);font-size:10px}
+.portfolio-pl-empty{padding:18px 4px;text-align:center;color:var(--mut);font-size:12px}
+@media(max-width:560px){.portfolio-pl-label{font-size:9px}.portfolio-pl-summary b{font-size:16px}.portfolio-pl-card{padding:14px!important}}
+@media(prefers-reduced-motion:reduce){.portfolio-pl-line{animation:none!important}.wallet-card,.wallet-share-track i{transition:none!important}}
 </style><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#102a28"></head><body><div id="app"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script>
@@ -691,42 +723,29 @@ function portfolioPLRows(assets){
 }
 const portfolioPLChart=assets=>{
  const rows=portfolioPLRows(assets||[]);
- if(!rows.length)return "<div class=\"market-empty\"><span class=\"market-empty-icon\">↗</span><b>"+_("لا توجد استثمارات مسجلة لعرض رأس المال والربح والخسارة|No investments are recorded to show invested capital and profit or loss")+"</b><small>"+_("أضف أصلًا وسجّل عمليات الشراء لعرض المقارنة.|Add an asset and record purchases to compare invested capital with its current value.")+"</small></div>";
- const invested=rows.reduce((sum,row)=>sum+row.invested,0),current=rows.reduce((sum,row)=>sum+row.current,0);
- const realized=rows.reduce((sum,row)=>sum+row.realized,0),unrealized=rows.reduce((sum,row)=>sum+row.unrealized,0);
- const total=rows.reduce((sum,row)=>sum+row.total,0),max=Math.max(1,...rows.flatMap(row=>[row.invested,row.current]));
- const W=760,H=316,L=86,R=24,T=24,B=66,bottom=H-B,plotW=W-L-R,plotH=bottom-T;
- const x=i=>rows.length===1?L+plotW/2:L+i/(rows.length-1)*plotW,y=value=>bottom-Math.max(0,value)/max*plotH;
- const investedPoints=rows.map((row,i)=>[x(i),y(row.invested)]),currentPoints=rows.map((row,i)=>[x(i),y(row.current)]);
- const path=points=>points.length>1?sm(points):"M "+points[0][0]+" "+points[0][1];
- const investedPath=path(investedPoints),currentPath=path(currentPoints);
- const area=rows.length>1?currentPath+" L "+currentPoints[currentPoints.length-1][0]+" "+bottom+" L "+currentPoints[0][0]+" "+bottom+" Z":"";
- const selectedIndex=typeof CAP_SELECTED==="number"&&Number.isFinite(CAP_SELECTED)?Math.max(0,Math.min(rows.length-1,CAP_SELECTED)):0,selected=rows[selectedIndex];
- const escapeHtml=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
- const gradId="capitalArea"+(seq++);
- const grid=[0,1,2,3,4].map(i=>{const value=max*(1-i/4),yy=T+i*plotH/4;return "<line x1=\""+L+"\" x2=\""+(W-R)+"\" y1=\""+yy+"\" y2=\""+yy+"\" class=\"capital-gridline\"/><text x=\""+(L-12)+"\" y=\""+(yy+4)+"\" text-anchor=\"end\" class=\"capital-axis-label\">"+escapeHtml(fm(value))+"</text>";}).join("");
- const labels=rows.map((row,i)=>{const shortName=row.name.length>14?row.name.slice(0,13)+"…":row.name;return "<text x=\""+x(i)+"\" y=\""+(H-29)+"\" text-anchor=\"middle\" class=\"capital-x-label\"><title>"+escapeHtml(row.name)+"</title>"+escapeHtml(shortName)+"</text>";}).join("");
+ const profit=rows.reduce((total,row)=>total+Math.max(0,Number(row.total)||0),0);
+ const loss=rows.reduce((total,row)=>total+Math.max(0,-(Number(row.total)||0)),0);
+ const W=720,H=224,L=22,R=22,T=16,B=42,plotH=H-T-B,plotW=W-L-R,maxAbs=Math.max(1,...rows.map(row=>Math.abs(Number(row.total)||0)));
+ const x=i=>rows.length===1?W/2:L+i/(rows.length-1)*plotW;
+ const y=value=>T+(maxAbs-(Number(value)||0))/(2*maxAbs)*plotH;
+ const points=rows.map((row,i)=>[x(i),y(row.total)]);
+ const path=points.length>1?sm(points):"";
+ const grid=[T,T+plotH/2,H-B].map((yy,i)=>'<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yy+'" y2="'+yy+'" class="'+(i===1?'pl-zero-line':'pl-grid-line')+'"/>').join('');
+ const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+ const line=path?'<path d="'+path+'" class="portfolio-pl-line"/>':'';
  const dots=rows.map((row,i)=>{
-  const active=i===selectedIndex?" is-selected":"",name=escapeHtml(row.name);
-  const investedTitle=name+" · "+_("المستثمر|Invested")+" "+fm(row.invested)+" · "+_("القيمة الحالية|Current value")+" "+fm(row.current);
-  const currentTitle=name+" · "+_("القيمة الحالية|Current value")+" "+fm(row.current)+" · "+_("الربح/الخسارة|P/L")+" "+fm(row.total);
-  return "<circle class=\"capital-dot capital-dot-invested"+active+"\" cx=\""+x(i)+"\" cy=\""+y(row.invested)+"\" r=\"5.5\" tabindex=\"0\" role=\"button\" data-a=\"capitalPoint\" data-v=\""+i+"\" aria-label=\""+escapeHtml(investedTitle)+"\"><title>"+escapeHtml(investedTitle)+"</title></circle>"+
-   "<circle class=\"capital-dot capital-dot-current"+active+"\" cx=\""+x(i)+"\" cy=\""+y(row.current)+"\" r=\"6.5\" tabindex=\"0\" role=\"button\" data-a=\"capitalPoint\" data-v=\""+i+"\" aria-label=\""+escapeHtml(currentTitle)+"\"><title>"+escapeHtml(currentTitle)+"</title></circle>";
- }).join("");
- const pairConnector=rows.length===1?"<line x1=\""+x(0)+"\" x2=\""+x(0)+"\" y1=\""+y(rows[0].invested)+"\" y2=\""+y(rows[0].current)+"\" class=\"capital-pair-connector\"/>":"";
- const selectedTone=selected.total>=0?"up":"down";
- return "<div class=\"portfolio-pl capital-chart\"><div class=\"capital-summary\"><div><small>"+_("إجمالي المبالغ المستثمرة|Total invested capital")+"</small><b>"+fm(invested)+"</b></div>"+
-  "<div><small>"+_("القيمة الحالية للاستثمارات|Current investment value")+"</small><b>"+fm(current)+"</b></div>"+
-  "<div><small>"+_("الربح/الخسارة الكلي · شامل المحقق|Total P/L · including realized")+"</small><b class=\""+(total>=0?"up":"down")+"\">"+fm(total)+"</b><div class=\"capital-pl-breakdown\"><span><small>"+_("محقق|Realized")+"</small><b>"+fm(realized)+"</b></span><span><small>"+_("غير محقق|Unrealized")+"</small><b>"+fm(unrealized)+"</b></span></div></div></div>"+
-  "<div class=\"capital-line-legend\"><span><i class=\"invested\"></i>"+_("رأس المال المستثمر|Invested capital")+"</span><span><i class=\"current\"></i>"+_("القيمة الحالية|Current value")+"</span></div>"+
-  "<svg class=\"capital-line-chart\" viewBox=\"0 0 "+W+" "+H+"\" role=\"group\" aria-label=\""+_("مقارنة خطية لرأس المال المستثمر والقيمة الحالية لكل أصل|Line comparison of invested capital and current value by asset")+"\"><defs><linearGradient id=\""+gradId+"\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"var(--g)\" stop-opacity=\".2\"/><stop offset=\"100%\" stop-color=\"var(--g)\" stop-opacity=\"0\"/></linearGradient></defs>"+
-  grid+(area?"<path d=\""+area+"\" class=\"capital-current-area\" fill=\"url(#"+gradId+")\"/>":"")+pairConnector+
-  (rows.length>1?"<path d=\""+investedPath+"\" class=\"capital-series capital-series-invested\"/>":"")+
-  (rows.length>1?"<path d=\""+currentPath+"\" class=\"capital-series capital-series-current\"/>":"")+dots+labels+"</svg>"+
-  "<div class=\"capital-selection\"><div class=\"capital-selection-head\"><b>"+escapeHtml(selected.name)+"</b><span class=\""+selectedTone+"\">"+_("الربح/الخسارة الكلي|Total P/L")+" · "+fm(selected.total)+"</span></div>"+
-  "<div class=\"capital-selection-metrics\"><span><small>"+_("المستثمر|Invested")+"</small><b>"+fm(selected.invested)+"</b></span><span><small>"+_("القيمة الحالية|Current value")+"</small><b>"+fm(selected.current)+"</b></span><span><small>"+_("محقق|Realized")+"</small><b>"+fm(selected.realized)+"</b></span><span><small>"+_("غير محقق|Unrealized")+"</small><b>"+fm(selected.unrealized)+"</b></span></div>"+
-  "<div class=\"capital-selection-hint\">"+_("اضغط على أي نقطة في الرسم لعرض تفاصيل الأصل.|Select any point on the chart to inspect that asset.")+"</div></div>"+
-  "<div class=\"gold-trend-note\">"+_("يعرض الرسم رأس المال المستثمر مقابل القيمة الحالية لكل أصل، مع احتساب الربح/الخسارة المحقق وغير المحقق. لا يعرض سعر الذهب العالمي أو حركة XAU/USD.|This chart compares invested capital with current value for each asset and includes realized and unrealized profit/loss. It does not show the global gold price or XAU/USD movement.")+"</div></div>";
+  const value=Number(row.total)||0,tone=value>0?'profit':value<0?'loss':'neutral';
+  return '<circle cx="'+x(i)+'" cy="'+y(value)+'" r="6" class="portfolio-pl-point '+tone+'"><title>'+esc(row.name)+' · '+(value>0?'+':'')+esc(fm(value))+'</title></circle>';
+ }).join('');
+ const labels=rows.map((row,i)=>{
+  const shortName=String(row.name||'').length>13?String(row.name).slice(0,12)+'…':String(row.name||'—');
+  return '<text x="'+x(i)+'" y="'+(H-15)+'" text-anchor="middle" class="portfolio-pl-label"><title>'+esc(row.name)+'</title>'+esc(shortName)+'</text>';
+ }).join('');
+ return '<div class="portfolio-pl-simple"><div class="portfolio-pl-summary">'+
+  '<div class="pl-profit"><small>'+_("الربح|Profit")+'</small><b>'+fm(profit)+'</b></div>'+
+  '<div class="pl-loss"><small>'+_("الخسارة|Loss")+'</small><b>'+fm(loss)+'</b></div></div>'+
+  (rows.length?'<svg class="portfolio-pl-chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+_("رسم خطي للربح والخسارة حسب الأصل|Profit and loss line chart by asset")+'">'+grid+line+dots+labels+'</svg>':'<p class="portfolio-pl-empty">'+_("سجّل عمليات الذهب لعرض الربح والخسارة|Record gold transactions to show profit and loss")+'</p>')+
+ '</div>';
 };
 
 const goldKaratStrip=g=>'<div class="gold-karat-strip">'+[24,22,21,18].map(k=>'<div class="gold-karat-cell"><small>'+k+'K / '+_('جرام|g')+'</small><b>'+fm(cv(gUSDg()*PUR[k],'USD',S.base))+'</b></div>').join('')+'</div>';
@@ -820,10 +839,8 @@ PG.invest=()=>{
  const historyRows=history.map(r=>"<tr><td>"+r.d+"</td><td>"+(r.t==="buy"?_("شراء|Purchase"):_("بيع|Sale"))+"</td><td>"+esc(nm(S.inv,r.ref))+"</td><td>"+Number(r.q||0).toFixed(4)+" g</td><td class=am>"+fm(r.a,r.c)+"</td><td>"+esc(nm(S.accs,r.acc))+"</td>"+
   '<td><div class=cht><button class=ib data-a=ed data-v="'+r.id+'" title="'+_("تعديل العملية|Edit transaction")+'" aria-label="'+_("تعديل العملية|Edit transaction")+'">✎</button><button class=ib data-a=del data-v="'+r.id+'" title="'+_("حذف مع عكس الأثر|Delete and reverse")+'" aria-label="'+_("حذف مع عكس الأثر|Delete and reverse")+'">✕</button></div></td></tr>').join("")||
   '<tr><td colspan=7 class=em>'+_("لا توجد عمليات شراء أو بيع مسجلة بعد|No purchase or sale transactions yet")+"</td></tr>";
- return hd("الذهب — ذكاء الاستثمار|Gold — investment intelligence","محفظتك من الذهب فقط، مسعّرة بالأونصة العالمية|A gold-only portfolio priced off the global ounce",controls)+
-  goldHeroCard(g)+goldKaratStrip(g)+
-  '<div class="g c2 q investment-insights"><div class="cd investment-capital-card"><div class="market-title"><div><h4>'+_("رأس المال المستثمر والربح والخسارة حسب الأصل|Invested capital and profit/loss by asset")+'</h4><small>'+_("مقارنة رأس المال المستثمر بالقيمة الحالية مع فصل المحقق وغير المحقق|Compare invested capital with current value, separating realized and unrealized P/L")+'</small></div><span class="market-live"><i></i>'+_("بيانات المحفظة|Portfolio data")+"</span></div>"+portfolioPLChart(A)+'</div>'+
-  '<div class=cd><div class=market-title><div><h4>'+_("توزيع الذهب|Gold allocation")+'</h4><small>'+_("توزيع القيمة الحالية حسب نوع الذهب|Current value by gold type")+"</small></div></div>"+donut(by)+'<div class=gold-weight-chip><small>'+_("صافي وزن الذهب|Net gold weight")+'</small><bdi>'+gr.toFixed(3)+" g</bdi></div></div></div>"+
+ return hd("الذهب|Gold","الربح والخسارة في محفظة الذهب|Gold portfolio profit and loss",controls)+
+  '<div class="cd portfolio-pl-card"><h4>'+_("الربح والخسارة|Profit & loss")+'</h4>'+portfolioPLChart(A)+'</div>'+
   '<div class=cd><div class=market-title><div><h4>'+_("الأصول الذهبية|Gold assets")+'</h4><small>'+_("عدّل بيانات الأصل أو احذفه نهائيًا مع عملياته عند التأكيد|Edit the asset or permanently delete it and its operations after confirmation")+"</small></div></div><div class=sc><table><thead><tr>"+headers+"</tr></thead><tbody>"+rows+"</tbody></table></div></div>"+
   '<div class=cd investment-history><div class=market-title><div><h4>'+_("سجل عمليات الاستثمار|Investment transaction history")+'</h4><small>'+_("يمكن تعديل الشراء أو البيع، أو حذفه مع عكس أثره على الأرصدة|Edit a purchase or sale, or delete it with the balance impact reversed")+"</small></div></div><div class=sc><table><thead><tr>"+["التاريخ|Date","الحركة|Movement","الأصل|Asset","الكمية|Quantity","المبلغ|Amount","الحساب|Account","الإجراءات|Actions"].map(h=>"<th>"+_(h)+"</th>").join("")+"</tr></thead><tbody>"+historyRows+"</tbody></table></div></div>";
 };
@@ -1604,25 +1621,36 @@ PG.exchange=()=>{
  </div>
  <p class=bc>${_('الأسعار للاطلاع فقط وليست عرضًا للتحويل الفعلي.|Rates are indicative, not a transfer offer.')}</p>`
 };
-PG.home=()=>{const I=mon('inc'),E=mon('exp'),N=I.map((v,i)=>v-E[i]),c=cm(),p=Math.max(0,c-1),sel=MO<0||MO>11?c:MO,empty=!(S.tx.length||S.loans.length||S.goals.length||S.inv.length),al=alerts(),mx=Math.max(1,...I,...E),yrs=[TY-3,TY-2,TY-1,TY,TY+1],as=[[_('الحسابات|Accounts'),accT(),'accounts','▣'],[_('الادخار|Savings'),savT(),'savings','◎'],[_('الذهب|Gold'),invV(),'invest','◈'],[_('القروض|Debts'),-Z(LN().map(rem)),'loans','◐']].filter(z=>z[1]!=0),tot=Z(as.filter(z=>z[1]>0).map(z=>z[1])),g=S.goals.find(z=>!z.stop&&sv(z)<cv(z.target,z.cur))||S.goals[0],pc=g?Math.min(100,sv(g)/(cv(g.target,g.cur)||1)*100):0;
+PG.home=()=>{const I=mon('inc'),E=mon('exp'),N=I.map((v,i)=>v-E[i]),c=cm(),p=Math.max(0,c-1),sel=MO<0||MO>11?c:MO,empty=!(S.tx.length||S.loans.length||S.goals.length||S.inv.length),al=alerts(),mx=Math.max(1,...I,...E),yrs=[TY-3,TY-2,TY-1,TY,TY+1],g=S.goals.find(z=>!z.stop&&sv(z)<cv(z.target,z.cur))||S.goals[0],pc=g?Math.min(100,sv(g)/(cv(g.target,g.cur)||1)*100):0;
 return `${empty?`<div class=cd style="text-align:center"><h3>${_('ابدأ بتسجيل أول عملية|Record your first transaction')}</h3><p class=bc style="margin:6px 0 12px">${_('كل الأرقام تُحسب من عملياتك فقط.|Every figure comes from your own records.')}</p><button class="bt pr" data-a=quick>${_('إضافة عملية|Add transaction')}</button> <button class=bt data-a=demo>${_('بيانات تجريبية|Load sample data')}</button></div>`:''}
 <div class=hi><h1>${_('مرحبًا|Hello')}, <b>${S.name||_('بك|there')}</b>!</h1><p>${_('تابع أموالك اليوم.|Look at your money today.')}</p></div>
 <div class=bal><small>${_('القيمة الحالية|Current value')}</small><b class=n data-n="${NW()}">${fm(NW())}</b><div>${chip(chg(N[c],N[p]))} <small>${_('صافي التدفق مقابل الشهر الماضي|net flow vs last month')}</small></div></div>
 <div class=qas>${[['inc','↗','دخل|Income'],['exp','↘','مصروف|Expense'],['trf','⇄','تحويل|Transfer']].map(a=>`<button class=qa data-a=add data-v=${a[0]}><span>${a[1]}</span><small>${_(a[2])}</small></button>`).join('')}<a class=qa href="#/exchange"><span>$</span><small>${_('صرف|Exchange')}</small></a></div>
 <div class="g c2 wallet-overview">
 ${(()=>{
- const month=`${S.year}-${pad(c+1)}`,rows=S.tx.filter(r=>String(r.d||'').slice(0,7)===month),sumType=(...types)=>Z(rows.filter(r=>types.includes(r.t)).map(r=>Math.abs(B(r))));
- const transferOut=sumType('trf','sav','buy','pay'),available=I[c]-E[c]-transferOut;
- const series=key=>Array.from({length:12},(_,i)=>Z(S.tx.filter(r=>r.t===key&&r.d.slice(0,4)==String(S.year)&&+r.d.slice(5,7)<=i+1).map(r=>Math.abs(B(r)))));
- const card=(title,value,sub,href,data,color)=>`<a class="cd wallet-card" href="#/${href}"><div class=ft><b>${title}</b><small>${sub}</small></div><b class="n wallet-value" data-n="${value}">${fm(value)}</b><div class=wallet-spark>${line(data,color)}</div></a>`;
- return card(_('الدخل والمصروفات|Income & expenses'),available,_('المتبقي بعد المصروفات والتحويلات|Remaining after expenses and transfers'),'activity',series('inc').map((v,i)=>v-series('exp')[i]),'var(--g)')
- +card(_('الاستثمار|Investments'),invV(),_('القيمة الحالية للمحفظة|Current portfolio value'),'invest',series('buy'),'#16a34a')
- +card(_('الادخار|Savings'),savT(),_('إجمالي أرصدة الأهداف|Savings goal balances'),'savings',series('sav'),'var(--gd)')
- +card(_('الديون والقروض|Debts & loans'),Z(LN().map(rem)),_('إجمالي المبالغ المتبقية|Total outstanding'),'loans',Array.from({length:12},(_,i)=>Math.max(0,Z(LN().map(l=>cv(l.orig,l.cur)))-Z(LN().map(l=>sum(S.tx.filter(r=>r.t==='pay'&&r.ref==l.id&&r.d.slice(0,4)==String(S.year)&&+r.d.slice(5,7)<=i+1).map(B)))))),'#8b909a')
+ const wealth=NW(),ratio=value=>wealth>0?Math.abs(Number(value)||0)/wealth*100:null;
+ const card=(key,title,value,sub,href,icon)=>{
+  const amount=Number(value)||0,share=ratio(amount),width=share===null?0:Math.min(100,share);
+  const shareText=share===null?'—':share.toFixed(1)+'%';
+  return `<a class="cd wallet-card wallet-${key}" href="#/${href}">
+   <div class="wallet-card-head"><span class="wallet-glyph">${icon}</span><b>${title}</b><strong>${shareText}</strong></div>
+   <b class="n wallet-value" data-n="${amount}">${fm(amount)}</b>
+   <small class="wallet-sub">${sub}</small>
+   <span class="wallet-share-track" aria-hidden="true"><i style="width:${width.toFixed(2)}%"></i></span>
+  </a>`;
+ };
+ return [
+  card('accounts',_('الحسابات|Accounts'),accT(),_('أرصدة الحسابات الحالية|Current account balances'),'accounts','▣'),
+  card('income',_('الدخل|Income'),I[c],_('دخل الشهر|Income this month'),'income','↗'),
+  card('expenses',_('المصروفات|Expenses'),E[c],_('مصروفات الشهر|Expenses this month'),'expenses','↘'),
+  card('investment',_('الاستثمار|Investments'),invV(),_('القيمة الحالية للمحفظة|Current portfolio value'),'invest','◈'),
+  card('debts',_('الديون|Receivables'),Z(OW().map(rem)),_('مبالغ مستحقة لك|Money owed to you'),'loans','＋'),
+  card('loans',_('القروض|Loans'),Z(LN().map(rem)),_('مبالغ مستحقة عليك|Outstanding loans'),'loans','−'),
+  card('savings',_('الادخار|Savings'),savT(),_('إجمالي المدخرات|Total savings'),'savings','◎')
+ ].join('');
 })()}
 </div>
 <div class=cp2><div class=ft><h4>${_('النظرة السنوية|Annual overview')}</h4><select onchange="S.year=+this.value;save();build()">${yrs.map(y=>`<option ${y==S.year?'selected':''}>${y}</option>`).join('')}</select></div><div class=cap>${I.map((v,i)=>`<button class="cc${i==sel?' on':''}" data-a=mo data-v=${i} aria-label="${MN(i)}">${S.year==TY&&i>CM?'':`<i style="height:${Math.max(4,v/mx*100)}%;animation-delay:${i*40}ms"></i><i class=e style="height:${Math.max(4,E[i]/mx*100)}%;animation-delay:${i*40+70}ms"></i>`}${i==sel?`<em>${cf(N[i])}</em>`:''}</button>`).join('')}</div><div class=cl>${I.map((v,i)=>`<span>${i+1}</span>`).join('')}</div><small class=bc>${MN(sel)} ${S.year}</small><div class=st3><div><small>${_('الدخل|Income')}</small><b class=n data-n="${I[sel]}">${fm(I[sel])}</b></div><div><small>${_('المصروفات|Expenses')}</small><b class=n data-n="${E[sel]}">${fm(E[sel])}</b></div><div><small>${_('الصافي|Net')}</small><b class=n data-n="${N[sel]}">${fm(N[sel])}</b></div></div></div>
-${as.length?`<div class=tcs>${as.map((z,i)=>`<a class="tcd t${i%3}" href="#/${z[2]}"><div class=tt><span class=chp2>${z[3]} ${z[0]}</span><em>${z[1]>0&&tot?(z[1]/tot*100).toFixed(0)+'%':'—'}</em></div><div class=tb2><b>${fm(z[1])}</b><div class=ln2><i style="width:${z[1]>0&&tot?Math.min(100,z[1]/tot*100):0}%"></i></div></div></a>`).join('')}</div>`:''}
 ${g?`<a class=gl2 href="#/savings"><div class=ft><b>${g.n}</b><small>${fm(cv(g.target,g.cur))}</small></div><div class=prg><i style="width:${pc}%">${pc.toFixed(0)}%</i><span>${(100-pc).toFixed(0)}%</span></div><small>${_('المتبقي للوصول للهدف|Left to reach the goal')}: ${fm(Math.max(0,cv(g.target,g.cur)-sv(g)))}</small></a>`:`<button class="cd dash" data-a=add data-v=goal>＋ ${_('أنشئ هدف ادخار|Create a savings goal')}</button>`}
 ${S.tx.length?`<div class=cd><div class=ft><h4>${_('آخر العمليات|Recent')}</h4><a href="#/activity" class=bc>${_('عرض الكل|View all')}</a></div><div class=chs style="margin:8px 0">${[['all','الكل|All'],['exp','مصروف|Spend'],['inc','دخل|Income'],['big','الأعلى|Top']].map(c=>`<button class="chp ${HF==c[0]?'sel':''}" data-a=hf data-v=${c[0]}>${_(c[1])}</button>`).join('')}</div>${hl().slice(0,5).map(r=>{const i=isIn(r);return `<div class="ar2${r.id==LASTID?' nr':''}"><span class="ic${i?' in':''}">${ICO[r.t]}</span><div><b>${lab(r)}</b><small>${r.d}</small></div><b class="am${i?' pos':''}">${r.t=='trf'?'':i?'+':'−'}${fm(Math.abs(r.a),r.c)}</b></div>`}).join('')}</div>`:''}
 ${al.length?`<div class=cd><h4>${_('تنبيهات|Alerts')}</h4>${alb()}</div>`:''}`};
