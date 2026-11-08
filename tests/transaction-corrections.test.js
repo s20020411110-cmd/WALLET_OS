@@ -235,3 +235,43 @@ test('loans and receivables have separate pages and creation paths', () => {
   assert.match(html, /loan:\(\)=>addLoan\('loan'\),debt:addDebt/);
   assert.match(html, /card\('debts',[^\n]*'debts'/);
 });
+
+
+test('manual finance category names survive local reload and are used by budgets and transaction history', () => {
+  assert.match(html, /function hydrateFinanceCategoryLabels\(\)/);
+  assert.match(html, /ensureLocalCategory\('expense',n\)/);
+  assert.match(html, /categoryName:category\?\.name\|\|''/);
+  assert.match(html, /categoryName:CLOUD_CATEGORY_ROWS\.find\(c=>String\(c\.id\)===String\(t\.category_id\)\)/);
+  assert.match(html, /inc:\(\)=>r\.categoryName\|\|_\(SRC\[r\.cat\]\|\|''\)/);
+  assert.match(html, /exp:\(\)=>r\.categoryName\|\|_\(CAT\[r\.cat\]\|\|''\)/);
+  assert.match(html, /htm\(b\.categoryName\|\|_\(CAT\[b\.ci\]\|\|''\)\)/);
+});
+
+test('new loan and receivable origination is atomic with the selected bank or cash account', () => {
+  assert.match(html, /function addLoan\(kind='loan'\)/);
+  assert.match(html, /p_account_id:wallet\.id/);
+  assert.match(html, /cloudRpc\('create_loan_from_account_v1'/);
+  assert.match(html, /t:'disb',a:principal,c:v\.cur,d:v\.start\|\|TD,acc:wallet\.id,ref:id/);
+  assert.match(html, /loan_disbursement:'disb'/);
+  assert.match(html, /\(k==='pay'\|\|k==='disb'\)\?t\.related_loan_id/);
+  assert.match(html, /r\.t==='disb'\?'':/);
+  assert.match(html, /r\.t==='disb'\)return toast/);
+  assert.match(html, /history=S\.tx\.filter\(x=>\(x\.t==='pay'\|\|x\.t==='disb'\)/);
+});
+
+test('loan origination migration creates one owner-scoped balanced wallet and debt posting', () => {
+  const migration=fs.readFileSync(path.join(__dirname,'..','supabase','wallet_os_loans_linked_to_wallet_accounts_v1.sql'),'utf8');
+  assert.match(migration,/create or replace function private\.create_loan_from_account_v1/i);
+  assert.match(migration,/auth\.uid\(\)/i);
+  assert.match(migration,/security definer[\s\S]*set search_path to ''/i);
+  assert.match(migration,/where id=p_account_id and user_id=v_user and not is_archived[\s\S]*for update/i);
+  assert.match(migration,/if p_kind='owed'[\s\S]*Insufficient funds to lend this amount/i);
+  assert.match(migration,/insert into public\.transactions\([\s\S]*'loan_disbursement'/i);
+  assert.match(migration,/insert into public\.journal_entries/i);
+  assert.match(migration,/amount_debit,base_debit/);
+  assert.match(migration,/amount_credit,base_credit/);
+  assert.match(migration,/alter table/i)===false;
+  assert.match(migration,/alter function public\.create_loan_from_account_v1[\s\S]*security invoker/i);
+  assert.match(migration,/revoke all on function private\.create_loan_from_account_v1[\s\S]*from public,anon,authenticated/i);
+  assert.match(migration,/grant execute on function private\.create_loan_from_account_v1[\s\S]*to authenticated/i);
+});
