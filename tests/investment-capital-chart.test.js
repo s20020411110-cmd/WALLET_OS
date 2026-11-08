@@ -89,3 +89,20 @@ test('investment transaction deletion is permanent for buys and sells, while oth
   assert.match(html, /Permanently delete this investment operation/);
 });
 
+
+
+test('permanent investment deletion migration is owner-scoped, atomic and removes the journal correction chain', () => {
+  const migration = fs.readFileSync(path.join(__dirname, '..', 'supabase', 'wallet_os_permanent_investment_deletion_v1.sql'), 'utf8');
+  assert.match(migration, /create or replace function private\\.delete_investment_data_impl/);
+  assert.match(migration, /security definer[\\s\\S]*auth\\.uid\\(\\)/);
+  assert.match(migration, /set search_path to ''/i);
+  assert.match(migration, /create or replace function public\\.delete_investment_data/);
+  assert.match(migration, /create or replace function private\\.update_investment_asset_impl/);
+  assert.match(migration, /delete from public\\.investment_trades/);
+  assert.match(migration, /delete from public\\.transactions/);
+  assert.match(migration, /delete from public\\.audit_logs/);
+  assert.match(migration, /replacement_transaction_id = null/);
+  assert.match(migration, /reversal_of = null/);
+  assert.match(migration, /if not exists \\(\\s*select 1 from public\\.journal_entries/);
+  assert.match(migration, /grant execute on function public\\.delete_investment_data[\\s\\S]*to authenticated/);
+});
