@@ -55,8 +55,8 @@ test('home dashboard separates seven categories and calculates their ratio again
   assert.match(home, /key==='income'\?100/);
   assert.match(home, /Math\.abs\(Number\(value\)\|\|0\)\/denominator\*100/);
   assert.doesNotMatch(home, /wealth=NW\(\),ratio=value/);
-  assert.match(home, /I\[c\].*Income this month/);
-  assert.match(home, /E\[c\].*Expenses this month/);
+  assert.match(home, /I\[c\].*Monthly income/);
+  assert.match(home, /E\[c\].*Monthly expenses/);
   assert.match(home, /Z\(OW\(\)\.map\(rem\)\)/);
   assert.match(home, /Z\(LN\(\)\.map\(rem\)\)/);
   assert.doesNotMatch(home, /wallet-spark|income & expenses|debts & loans|class=tcs/);
