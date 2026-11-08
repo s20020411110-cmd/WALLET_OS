@@ -201,12 +201,12 @@ test('manual income and expense categories are persisted as owner-scoped cloud c
   assert.match(html, /if\(t=='inc'\)f\.push\(\['catName'/);
   assert.match(html, /if\(t=='exp'\)f\.push\(\['catName'/);
   assert.match(html, /cat=v\.categoryId\|\|cloudCategoryId\(type,v\.cat\)/);
-  assert.match(html, /categoryId= v\.categoryId/);
+  assert.match(html, /categoryId=v\.categoryId\|\|cloudCategoryId\(type,Number\(v\.cat\)\)/);
 });
 
 test('offline custom categories are queued before postings and local category IDs are remapped on sync', () => {
   assert.match(html, /'create_finance_category'/);
-  assert.match(html, /p_category_id\)if\(out\[k\]!=null\)out\[k\]=map\[String\(out\[k\]\)\]/);
+  assert.match(html, /'p_category_id'\]\)if\(out\[k\]!=null\)out\[k\]=map\[String\(out\[k\]\)\]/);
   assert.match(html, /else if\(name==='create_finance_category'\)/);
   const syncStart = html.indexOf('async function cloudSyncPending(');
   const syncEnd = html.indexOf('function cloudLoanKind', syncStart);
