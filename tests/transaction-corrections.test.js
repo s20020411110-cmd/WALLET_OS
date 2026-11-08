@@ -225,6 +225,7 @@ test('account opening balances use the double-entry opening balance RPC and appe
   assert.match(html, /Number\(a\.openingBalance\)\|\|0/);
   assert.match(html, /PG\.accounts=\(\)=>/);
   assert.match(html, /postFromAccount\(value\)/);
+  assert.match(html, /addTx\(parts\[1\],\{acc:account\.id,c:account\.cur\}\)/);
 });
 
 test('loans and receivables have separate pages and creation paths', () => {
