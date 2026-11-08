@@ -107,10 +107,9 @@ test('cloud management actions no longer use the legacy cloud-blocked message', 
     "cloudManageItem('loan',id,'update'",
     "cloudManageItem('goal',id,'update'",
     "cloudManageItem('goal',id,'pause'",
-    "cloudManageItem('investment',id,'update'",
+    "cloudInvestmentMutation('update'",
     "cloudManageItem('loan',id,'archive'",
     "cloudManageItem('goal',id,'archive'",
-    "cloudManageItem('investment',id,'archive'",
     "cloudManageItem('wallet',id,'archive'",
     "cloudManageItem('budget',id,'delete'"
   ]) assert.ok(html.includes(action), 'missing cloud management route: ' + action);
@@ -157,4 +156,14 @@ test('cloud management function stays outside the exposed API schema and the pub
   assert.match(migration, /create or replace function public\.manage_financial_item[\s\S]*security invoker/);
   assert.match(migration, /revoke all on function public\.manage_financial_item/);
   assert.match(migration, /grant execute on function public\.manage_financial_item[\s\S]*to authenticated/);
+});
+
+test('investment asset edits and permanent deletion bypass archive management', () => {
+  assert.match(html, /cloudInvestmentMutation\('update'/);
+  assert.match(html, /cloudInvestmentMutation\('delete_asset'/);
+  assert.match(html, /SB\.rpc\('update_investment_asset'/);
+  assert.match(html, /SB\.rpc\('delete_investment_data'/);
+  assert.match(html, /Permanently delete this asset/);
+  assert.match(html, /purgeInvestmentLocalCopies/);
+  assert.doesNotMatch(html, /restoreInvestment\(id\)/);
 });
