@@ -639,6 +639,7 @@ const portfolioPLChart=assets=>{
  const invested=rows.reduce((sum,row)=>sum+row.invested,0);
  const current=rows.reduce((sum,row)=>sum+row.current,0);
  const realized=rows.reduce((sum,row)=>sum+row.realized,0);
+ const unrealized=rows.reduce((sum,row)=>sum+row.unrealized,0);
  const total=rows.reduce((sum,row)=>sum+row.total,0);
  const max=Math.max(1,...rows.flatMap(row=>[row.invested,row.current]));
  const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -649,9 +650,9 @@ const portfolioPLChart=assets=>{
   return '<div class="capital-row"><b class="capital-name" title="'+escapeHtml(row.name)+'">'+escapeHtml(row.name)+'</b>'+
    '<div class="capital-bars"><div class="capital-bar-line"><small>'+_('المستثمر|Invested')+'</small><span class="capital-track"><i class="invested" style="width:'+investedWidth.toFixed(2)+'%"></i></span><b>'+fm(row.invested)+'</b></div>'+
    '<div class="capital-bar-line"><small>'+_('القيمة الحالية|Current value')+'</small><span class="capital-track"><i class="current" style="width:'+currentWidth.toFixed(2)+'%"></i></span><b>'+fm(row.current)+'</b></div></div>'+
-   '<div class="capital-result '+(positive?'up':'down')+'"><b>'+fm(row.total)+'</b><small>'+_('الربح/الخسارة الكلي|Total P/L')+'</small></div></div>';
+   '<div class="capital-result pl-bar '+(positive?'up':'down')+'"><b>'+fm(row.total)+'</b><small>'+_('الربح/الخسارة الكلي|Total P/L')+'</small><div class="capital-pl-breakdown"><span><small>'+_('محقق|Realized')+'</small><b>'+fm(row.realized)+'</b></span><span><small>'+_('غير محقق|Unrealized')+'</small><b>'+fm(row.unrealized)+'</b></span></div></div></div>';
  }).join('');
- return '<div class="portfolio-pl capital-chart"><div class="capital-summary"><div><small>'+_('إجمالي المبالغ المستثمرة|Total invested capital')+'</small><b>'+fm(invested)+'</b></div><div><small>'+_('القيمة الحالية للاستثمارات|Current investment value')+'</small><b>'+fm(current)+'</b></div><div><small>'+_('الربح/الخسارة الكلي · شامل المحقق|Total P/L · including realized')+'</small><b class="'+(total>=0?'up':'down')+'">'+fm(total)+'</b></div></div>'+
+ return '<div class="portfolio-pl capital-chart"><div class="capital-summary"><div><small>'+_('إجمالي المبالغ المستثمرة|Total invested capital')+'</small><b>'+fm(invested)+'</b></div><div><small>'+_('القيمة الحالية للاستثمارات|Current investment value')+'</small><b>'+fm(current)+'</b></div><div><small>'+_('الربح/الخسارة الكلي · شامل المحقق|Total P/L · including realized')+'</small><b class="'+(total>=0?'up':'down')+'">'+fm(total)+'</b><div class="capital-pl-breakdown"><span><small>'+_('محقق|Realized')+'</small><b>'+fm(realized)+'</b></span><span><small>'+_('غير محقق|Unrealized')+'</small><b>'+fm(unrealized)+'</b></span></div></div></div>'+
   '<div class="capital-legend"><span><i class="invested"></i>'+_('المبلغ المستثمر|Invested amount')+'</span><span><i class="current"></i>'+_('القيمة الحالية|Current value')+'</span></div>'+list+
   '<div class="gold-trend-note">'+_('يعرض الرسم رأس المال المستثمر مقابل القيمة الحالية لكل أصل، مع احتساب الربح/الخسارة المحقق وغير المحقق. لا يعرض سعر الذهب العالمي أو حركة XAU/USD.|This chart compares invested capital with current value for each asset and includes realized and unrealized profit/loss. It does not show the global gold price or XAU/USD movement.')+'</div></div>';
 };
