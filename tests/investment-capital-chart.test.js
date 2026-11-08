@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
@@ -40,6 +41,28 @@ test('profit/loss chart is a single responsive line with gain/loss markers', () 
   assert.match(html, /portfolio-pl-summary/);
   assert.match(html, /grid-template-columns:1fr 1fr;gap:12px/);
   assert.doesNotMatch(html, /capital-series-invested|capital-series-current/);
+});
+
+test('user-controlled text is HTML-escaped before insertion into application markup', () => {
+  const helperStart = html.indexOf('const htm=value=>');
+  const helperEnd = html.indexOf(';', helperStart) + 1;
+  assert.ok(helperStart >= 0 && helperEnd > helperStart, 'shared HTML escape helper should exist');
+  const escapeHtml = vm.runInNewContext('(()=>{' + html.slice(helperStart, helperEnd) + ';return htm})()');
+  assert.equal(
+    escapeHtml('"><img src=x onerror=alert(1)> & \''),
+    '&quot;&gt;&lt;img src=x onerror=alert(1)&gt; &amp; &#39;'
+  );
+  const formStart = html.indexOf('function form(ti,fs,ok){');
+  const formEnd = html.indexOf('\nconst AO=', formStart);
+  const form = html.slice(formStart, formEnd);
+  assert.match(form, /htm\(ti\)/);
+  assert.match(form, /htm\(f\[1\]\)/);
+  assert.match(form, /htm\(o\[1\]\)/);
+  assert.match(form, /htm\(f\[4\]\?\?' '\)/);
+  assert.match(html, /\$\{htm\(z\[1\]\)\}/);
+  assert.match(html, /htm\(r\.note\)/);
+  assert.match(html, /htm\(S\.user\.name\)/);
+  assert.match(html, /htm\(b\.name\|\|_\(CAT\[b\.ci\]\)\)/);
 });
 
 test('home dashboard separates seven categories and uses correct asset/income ratio bases', () => {
