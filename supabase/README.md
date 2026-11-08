@@ -35,6 +35,8 @@ This is a dedicated project for WALLET OS. It is not the Supabase project used b
 | 20261108091745 | wallet_os_remove_archive_semantics_v1 | Owner-scoped reactivation of legacy archived rows for the no-archive user workflow |
 | 20261108093520 | wallet_os_disable_archive_management_actions_v1 | Disables archive/restore through the legacy cloud management RPC |
 | 20261108100135 | wallet_os_gold_realtime_channel_v1 | Private gold Broadcast authorization and a service-role-only single-worker lease |
+| 20261108101032 | wallet_os_gold_realtime_rls_initplan_v1 | Uses scalar JWT subqueries in the private market topic RLS policy |
+| 20261108101223 | wallet_os_gold_worker_lease_coalesce_fix_v1 | Fixes SQL expression syntax in worker lease acquire/renew helpers |
 
 
 The first six migrations remain recorded in the hosted Supabase migration history; the eight later hardening/correction migrations above are tracked as SQL files in this repository. The exact SQL for the original core schema migrations has not yet been exported into supabase/migrations/. Preserve hosted history as the source of truth and export/review the original SQL before future local schema work rather than reconstructing it from this guide.
