@@ -169,7 +169,7 @@ Add that same origin (and any custom production domain later adopted) to the all
 
 ## QA and integrity follow-up — 2026-11-08
 
-- GitHub Actions latest verified application test run at the last full app/Android source checkpoint: 42449266874, with 64/64 tests passed; Android Debug APK run 42449266896 completed artifact verification and upload. Later repository-only QA/test changes are tracked separately and must re-run CI before merge.
+- Latest `main` QA commit: `cf95742f87b18654b8c97a2485b9dcf27e8280e1`. GitHub Actions test run `42450033861` passed 66/66 tests (0 failed, 0 skipped). Android Debug APK run `42450033918` completed successfully, including artifact verification and upload (artifact `13605291363`, SHA-256 `00dad613938ceb289d18c312d4708d496bd685216fe4722589e4bb4380e67acb`). This is a Debug build, not a signed Release package.
 - Application regression tests include actual helper execution for a synthetic multi-currency ledger scenario: transfers, savings deposit/withdrawal, borrowed and receivable debt payments, archived liability inclusion in gross assets, and a partial investment sale with weighted-average cost.
 - HTML escaping regression coverage checks form values, profile fields, CSV preview, recent transactions, and the final alert renderer. Loan/goal alert text is escaped at the final HTML sink.
 - Supabase currently reports 16/16 public tables with RLS enabled and FORCE RLS enabled. Public/anonymous roles have no direct financial-table SELECT access. Both financial summary views use security_invoker=true.
