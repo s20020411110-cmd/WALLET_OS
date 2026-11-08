@@ -64,3 +64,39 @@ test('manual transfers retain both source and destination wallets and remain tra
   assert.match(helper, /p_destination_account_id:dest\?dest\.id:null/);
   assert.match(helper, /p_target_amount:ta/);
 });
+
+
+test('budgets accept a user-entered name and an optional linked wallet account', () => {
+  const start = html.indexOf('function addBud(){');
+  const end = html.indexOf('\nconst IC=', start);
+  assert.ok(start >= 0 && end > start, 'budget form should exist');
+  const form = html.slice(start, end);
+  assert.match(form, /\['name',_\('اسم الميزانية\|Budget name'\)/);
+  assert.match(form, /\['accountId',_\('الحساب المرتبط/);
+  assert.match(form, /name\.length>80/);
+});
+
+test('cloud budget writes and refreshes preserve the custom name and account link', () => {
+  assert.match(html, /budget_name:String\(b\.name\|\|''\)\.trim\(\)/);
+  assert.match(html, /account_id:b\.accountId\|\|null/);
+  assert.match(html, /name:b\.budget_name\|\|CLOUD_EXPENSE_NAMES/);
+  assert.match(html, /accountId:b\.account_id\|\|null/);
+});
+
+test('offline budget queue keeps the entered name and maps a pending account ID at sync', () => {
+  assert.match(html, /kind:'budget',categoryIndex:Number\(b\.ci\),name,accountId/);
+  assert.match(html, /budget_name:item\.name,account_id:item\.accountId\?\(map\[String\(item\.accountId\)\]\|\|item\.accountId\):null/);
+});
+
+test('account-linked budgets calculate spending only from the selected wallet', () => {
+  assert.match(html, /r\.t=='exp'&&r\.cat==b\.ci&&\(!b\.accountId\|\|String\(r\.acc\)===String\(b\.accountId\)\)/);
+});
+
+test('budget migration backfills existing names and enforces account ownership through RLS', () => {
+  const migration = fs.readFileSync(path.join(__dirname, '..', 'supabase', 'wallet_os_budget_names_and_account_links_v1.sql'), 'utf8');
+  assert.match(migration, /add column if not exists budget_name text/);
+  assert.match(migration, /add column if not exists account_id uuid/);
+  assert.match(migration, /update public\.budgets b[\s\S]*from public\.categories c/);
+  assert.match(migration, /budgets_insert_own[\s\S]*wallet_accounts a[\s\S]*a\.user_id = \(select auth\.uid\(\)\)/);
+  assert.match(migration, /budgets_update_own[\s\S]*wallet_accounts a[\s\S]*a\.user_id = \(select auth\.uid\(\)\)/);
+});
