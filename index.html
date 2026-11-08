@@ -451,6 +451,7 @@ button,input,select,textarea{font:inherit}
 @media(max-width:350px){.gold-hero{gap:4px}.gold-hero-price-line{gap:5px}.gold-hero-price{font-size:21px}.gold-hero-chart,.gold-hero-wait{width:78px}.gold-hero-change{font-size:9px;padding:2px 5px}.gold-karat-cell b{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.gold-hero-bar,.gold-hero-point{animation:none!important}}
 
+.wallet-overview{margin:12px 0}.wallet-card{display:block;text-decoration:none;color:inherit;min-width:0}.wallet-value{display:block;font-size:clamp(1.2rem,3vw,1.8rem);margin:10px 0 2px;font-weight:800;letter-spacing:-.03em}.wallet-spark{height:42px;overflow:hidden;opacity:.9}.wallet-spark svg{height:42px;width:100%}.wallet-card .ft small{max-width:55%;text-align:end}.wallet-card:active{transform:scale(.985)}
 </style><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#102a28"></head><body><div id="app"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script>
@@ -1209,6 +1210,18 @@ return `${empty?`<div class=cd style="text-align:center"><h3>${_('ابدأ بت�
 <div class=hi><h1>${_('مرحبًا|Hello')}, <b>${S.name||_('بك|there')}</b>!</h1><p>${_('تابع أموالك اليوم.|Look at your money today.')}</p></div>
 <div class=bal><small>${_('القيمة الحالية|Current value')}</small><b class=n data-n="${NW()}">${fm(NW())}</b><div>${chip(chg(N[c],N[p]))} <small>${_('صافي التدفق مقابل الشهر الماضي|net flow vs last month')}</small></div></div>
 <div class=qas>${[['inc','↗','دخل|Income'],['exp','↘','مصروف|Expense'],['trf','⇄','تحويل|Transfer']].map(a=>`<button class=qa data-a=add data-v=${a[0]}><span>${a[1]}</span><small>${_(a[2])}</small></button>`).join('')}<a class=qa href="#/exchange"><span>$</span><small>${_('صرف|Exchange')}</small></a></div>
+<div class="g c2 wallet-overview">
+${(()=>{
+ const month=`${S.year}-${pad(c+1)}`,rows=S.tx.filter(r=>String(r.d||'').slice(0,7)===month),sumType=(...types)=>Z(rows.filter(r=>types.includes(r.t)).map(r=>Math.abs(B(r))));
+ const transferOut=sumType('trf','sav','buy','pay'),available=I[c]-E[c]-transferOut;
+ const series=key=>Array.from({length:12},(_,i)=>Z(S.tx.filter(r=>r.t===key&&r.d.slice(0,4)==String(S.year)&&+r.d.slice(5,7)<=i+1).map(r=>Math.abs(B(r)))));
+ const card=(title,value,sub,href,data,color)=>`<a class="cd wallet-card" href="#/${href}"><div class=ft><b>${title}</b><small>${sub}</small></div><b class="n wallet-value" data-n="${value}">${fm(value)}</b><div class=wallet-spark>${line(data,color)}</div></a>`;
+ return card(_('الدخل والمصروفات|Income & expenses'),available,_('المتبقي بعد المصروفات والتحويلات|Remaining after expenses and transfers'),'activity',series('inc').map((v,i)=>v-series('exp')[i]),'var(--g)')
+ +card(_('الاستثمار|Investments'),invV(),_('القيمة الحالية للمحفظة|Current portfolio value'),'invest',series('buy'),'#16a34a')
+ +card(_('الادخار|Savings'),savT(),_('إجمالي أرصدة الأهداف|Savings goal balances'),'savings',series('sav'),'var(--gd)')
+ +card(_('الديون والقروض|Debts & loans'),Z(LN().map(rem)),_('إجمالي المبالغ المتبقية|Total outstanding'),'loans',Array.from({length:12},(_,i)=>Math.max(0,Z(LN().map(l=>cv(l.orig,l.cur)))-Z(LN().map(l=>sum(S.tx.filter(r=>r.t==='pay'&&r.ref==l.id&&r.d.slice(0,4)==String(S.year)&&+r.d.slice(5,7)<=i+1).map(B)))))),'#8b909a')
+})()}
+</div>
 <div class=cp2><div class=ft><h4>${_('النظرة السنوية|Annual overview')}</h4><select onchange="S.year=+this.value;save();build()">${yrs.map(y=>`<option ${y==S.year?'selected':''}>${y}</option>`).join('')}</select></div><div class=cap>${I.map((v,i)=>`<button class="cc${i==sel?' on':''}" data-a=mo data-v=${i} aria-label="${MN(i)}">${S.year==TY&&i>CM?'':`<i style="height:${Math.max(4,v/mx*100)}%;animation-delay:${i*40}ms"></i><i class=e style="height:${Math.max(4,E[i]/mx*100)}%;animation-delay:${i*40+70}ms"></i>`}${i==sel?`<em>${cf(N[i])}</em>`:''}</button>`).join('')}</div><div class=cl>${I.map((v,i)=>`<span>${i+1}</span>`).join('')}</div><small class=bc>${MN(sel)} ${S.year}</small><div class=st3><div><small>${_('الدخل|Income')}</small><b class=n data-n="${I[sel]}">${fm(I[sel])}</b></div><div><small>${_('المصروفات|Expenses')}</small><b class=n data-n="${E[sel]}">${fm(E[sel])}</b></div><div><small>${_('الصافي|Net')}</small><b class=n data-n="${N[sel]}">${fm(N[sel])}</b></div></div></div>
 ${as.length?`<div class=tcs>${as.map((z,i)=>`<a class="tcd t${i%3}" href="#/${z[2]}"><div class=tt><span class=chp2>${z[3]} ${z[0]}</span><em>${z[1]>0&&tot?(z[1]/tot*100).toFixed(0)+'%':'—'}</em></div><div class=tb2><b>${fm(z[1])}</b><div class=ln2><i style="width:${z[1]>0&&tot?Math.min(100,z[1]/tot*100):0}%"></i></div></div></a>`).join('')}</div>`:''}
 ${g?`<a class=gl2 href="#/savings"><div class=ft><b>${g.n}</b><small>${fm(cv(g.target,g.cur))}</small></div><div class=prg><i style="width:${pc}%">${pc.toFixed(0)}%</i><span>${(100-pc).toFixed(0)}%</span></div><small>${_('المتبقي للوصول للهدف|Left to reach the goal')}: ${fm(Math.max(0,cv(g.target,g.cur)-sv(g)))}</small></a>`:`<button class="cd dash" data-a=add data-v=goal>＋ ${_('أنشئ هدف ادخار|Create a savings goal')}</button>`}
