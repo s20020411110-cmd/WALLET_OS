@@ -270,7 +270,7 @@ test('loan origination migration creates one owner-scoped balanced wallet and de
   assert.match(migration,/insert into public\.journal_entries/i);
   assert.match(migration,/amount_debit,base_debit/);
   assert.match(migration,/amount_credit,base_credit/);
-  assert.match(migration,/alter table/i)===false;
+  assert.doesNotMatch(migration,/alter table/i);
   assert.match(migration,/alter function public\.create_loan_from_account_v1[\s\S]*security invoker/i);
   assert.match(migration,/revoke all on function private\.create_loan_from_account_v1[\s\S]*from public,anon,authenticated/i);
   assert.match(migration,/grant execute on function private\.create_loan_from_account_v1[\s\S]*to authenticated/i);
