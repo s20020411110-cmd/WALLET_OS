@@ -452,6 +452,42 @@ button,input,select,textarea{font:inherit}
 @media(prefers-reduced-motion:reduce){.gold-hero-bar,.gold-hero-point{animation:none!important}}
 
 .wallet-overview{margin:12px 0}.wallet-card{display:block;text-decoration:none;color:inherit;min-width:0}.wallet-value{display:block;font-size:clamp(1.2rem,3vw,1.8rem);margin:10px 0 2px;font-weight:800;letter-spacing:-.03em}.wallet-spark{height:42px;overflow:hidden;opacity:.9}.wallet-spark svg{height:42px;width:100%}.wallet-card .ft small{max-width:55%;text-align:end}.wallet-card:active{transform:scale(.985)}
+
+.capital-line-legend{display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:12px 2px 5px;color:var(--mut);font-size:11px}
+.capital-line-legend span{display:inline-flex;align-items:center;gap:7px}
+.capital-line-legend i{width:20px;height:3px;border-radius:9px;display:inline-block}
+.capital-line-legend i.invested{background:#82919e}.capital-line-legend i.current{background:var(--g)}
+.capital-line-chart{display:block;width:100%;height:auto;overflow:visible;direction:ltr;margin-top:3px}
+.capital-gridline{stroke:var(--ln);stroke-width:1;stroke-dasharray:3 6}
+.capital-axis-label,.capital-x-label{fill:var(--mut);font-size:10px;font-variant-numeric:tabular-nums}
+.capital-x-label{font-size:10px}
+.capital-series{fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;animation:capitalLineDraw 1.2s cubic-bezier(.2,.7,.25,1) both}
+.capital-series-invested{stroke:#82919e}
+.capital-series-current{stroke:var(--g);filter:drop-shadow(0 2px 4px color-mix(in srgb,var(--g) 25%,transparent))}
+.capital-current-area{opacity:.9}
+.capital-pair-connector{stroke:var(--mut);stroke-width:2;stroke-dasharray:3 4;opacity:.6}
+.capital-dot{cursor:pointer;stroke:var(--bg);stroke-width:2.5;transition:r .18s ease,stroke-width .18s ease,filter .18s ease;animation:capitalDotIn .55s cubic-bezier(.2,.7,.25,1) both}
+.capital-dot-invested{fill:#82919e}.capital-dot-current{fill:var(--g)}
+.capital-dot.is-selected{r:8;stroke-width:3.5;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--g) 45%,transparent))}
+.capital-dot:focus-visible{outline:none;stroke:var(--ink);stroke-width:4}
+.capital-selection{margin-top:5px;padding:12px 14px;border:1px solid var(--ln);border-radius:14px;background:var(--c);display:grid;gap:10px}
+.capital-selection-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.capital-selection-head b{font-size:13px}.capital-selection-head span{font-size:12px;font-weight:750;direction:ltr}
+.capital-selection-head .up{color:#16a34a}.capital-selection-head .down{color:#dc2626}
+.capital-selection-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.capital-selection-metrics span{display:grid;gap:3px;min-width:0}
+.capital-selection-metrics small{font-size:9px;color:var(--mut)}
+.capital-selection-metrics b{font-size:12px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.capital-selection-hint{font-size:9px;color:var(--mut)}
+.investment-insights{align-items:stretch}.investment-capital-card{min-width:0}
+.gold-weight-chip{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--c);display:flex;justify-content:space-between;gap:12px;align-items:center}
+.gold-weight-chip small{font-size:10px;color:var(--mut)}.gold-weight-chip bdi{font-size:14px;font-weight:750}
+.investment-history table{min-width:720px}.investment-history td small{display:block;color:var(--mut);font-size:9px}
+@keyframes capitalLineDraw{from{stroke-dashoffset:1;opacity:.3}to{stroke-dashoffset:0;opacity:1}}
+@keyframes capitalDotIn{from{transform:scale(.3);opacity:.2}to{transform:scale(1);opacity:1}}
+@media(max-width:560px){.capital-line-chart{min-height:185px}.capital-axis-label,.capital-x-label{font-size:9px}.capital-selection-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.capital-selection{padding:10px}.capital-line-legend{gap:12px;font-size:10px}}
+@media(prefers-reduced-motion:reduce){.capital-series,.capital-dot{animation:none!important;transition:none!important}}
+
 </style><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#102a28"></head><body><div id="app"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script>
@@ -492,6 +528,26 @@ const paid=l=>sum(S.tx.filter(r=>r.t=='pay'&&r.ref==l.id)),rem=l=>Math.max(0,cv(
 const LN=()=>S.loans.filter(l=>l.kind!='owed'&&!l.archived),OW=()=>S.loans.filter(l=>l.kind=='owed'&&!l.archived);
 const sv=g=>sum(S.tx.filter(r=>r.t=='sav'&&r.ref==g.id)),savT=()=>Z(S.goals.map(sv));
 function pos(a){let q=+a.q0||0,c=+a.c0||0,pl=0;S.tx.filter(r=>r.ref==a.id&&(r.t=='buy'||r.t=='sell')).sort((m,n)=>m.d.localeCompare(n.d)).forEach(r=>{const v=cv(r.a,r.c,a.cur);if(r.t=='buy'){q+=+r.q;c+=v}else{const k=q?Math.min(1,r.q/q):0,cs=c*k;pl+=v-cs;q-=r.q;c-=cs}});return{q,c,pl,v:q*gp(a)}}
+function investmentLedgerValidAfterEdit(assetId,transactionId,replacement){
+ const asset=S.inv.find(a=>String(a.id)===String(assetId));
+ if(!asset)return false;
+ const originalIndex=S.tx.findIndex(r=>String(r.id)===String(transactionId));
+ const entries=[];
+ S.tx.forEach((tx,index)=>{
+  if(String(tx.id)===String(transactionId)||String(tx.ref)!==String(assetId)||!['buy','sell'].includes(tx.t)||tx.is_voided)return;
+  entries.push({tx,index});
+ });
+ if(replacement&&String(replacement.ref)===String(assetId)&&['buy','sell'].includes(replacement.t))entries.push({tx:replacement,index:Math.max(0,originalIndex)});
+ entries.sort((a,b)=>String(a.tx.d||'').localeCompare(String(b.tx.d||''))||a.index-b.index);
+ let quantity=Number(asset.q0)||0;
+ for(const item of entries){
+  const amount=Number(item.tx.q);
+  if(!Number.isFinite(amount)||amount<=0)return false;
+  if(item.tx.t==='buy')quantity+=amount;
+  else{if(amount>quantity+1e-8)return false;quantity-=amount;}
+ }
+ return true;
+}
 const invV=()=>Z(S.inv.map(a=>cv(pos(a).v,a.cur))),invC=()=>Z(S.inv.map(a=>cv(pos(a).c,a.cur)));
 const accT=()=>Z(S.accs.map(balB)),NW=()=>accT()+savT()+invV()+Z(S.loans.filter(l=>l.kind=='owed').map(rem))-Z(S.loans.filter(l=>l.kind!='owed').map(rem));
 const chg=(a,b)=>b?(a-b)/Math.abs(b)*100:null;
@@ -634,27 +690,43 @@ function portfolioPLRows(assets){
  }).sort((a,b)=>Math.abs(b.total)-Math.abs(a.total));
 }
 const portfolioPLChart=assets=>{
- const rows=portfolioPLRows(assets).map(row=>({...row,invested:row.invested,current:row.current}));
- if(!rows.length)return '<div class="market-empty"><span class="market-empty-icon">₪</span><b>'+_('لا توجد استثمارات مسجلة لعرض رأس المال والربح والخسارة|No investments are recorded to show invested capital and profit or loss')+'</b><small>'+_('أضف أصلًا استثماريًا وسجّل عمليات الشراء والبيع لعرض المبالغ المستثمرة وقيمتها الحالية.|Add an investment and record purchases and sales to see invested amounts and their current value.')+'</small></div>';
- const invested=rows.reduce((sum,row)=>sum+row.invested,0);
- const current=rows.reduce((sum,row)=>sum+row.current,0);
- const realized=rows.reduce((sum,row)=>sum+row.realized,0);
- const unrealized=rows.reduce((sum,row)=>sum+row.unrealized,0);
- const total=rows.reduce((sum,row)=>sum+row.total,0);
- const max=Math.max(1,...rows.flatMap(row=>[row.invested,row.current]));
- const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
- const list=rows.map(row=>{
-  const investedWidth=Math.max(0,Math.min(100,row.invested/max*100));
-  const currentWidth=Math.max(0,Math.min(100,row.current/max*100));
-  const positive=row.total>=0;
-  return '<div class="capital-row"><b class="capital-name" title="'+escapeHtml(row.name)+'">'+escapeHtml(row.name)+'</b>'+
-   '<div class="capital-bars"><div class="capital-bar-line"><small>'+_('المستثمر|Invested')+'</small><span class="capital-track"><i class="invested" style="width:'+investedWidth.toFixed(2)+'%"></i></span><b>'+fm(row.invested)+'</b></div>'+
-   '<div class="capital-bar-line"><small>'+_('القيمة الحالية|Current value')+'</small><span class="capital-track"><i class="current" style="width:'+currentWidth.toFixed(2)+'%"></i></span><b>'+fm(row.current)+'</b></div></div>'+
-   '<div class="capital-result pl-bar '+(positive?'up':'down')+'"><b>'+fm(row.total)+'</b><small>'+_('الربح/الخسارة الكلي|Total P/L')+'</small><div class="capital-pl-breakdown"><span><small>'+_('محقق|Realized')+'</small><b>'+fm(row.realized)+'</b></span><span><small>'+_('غير محقق|Unrealized')+'</small><b>'+fm(row.unrealized)+'</b></span></div></div></div>';
- }).join('');
- return '<div class="portfolio-pl capital-chart"><div class="capital-summary"><div><small>'+_('إجمالي المبالغ المستثمرة|Total invested capital')+'</small><b>'+fm(invested)+'</b></div><div><small>'+_('القيمة الحالية للاستثمارات|Current investment value')+'</small><b>'+fm(current)+'</b></div><div><small>'+_('الربح/الخسارة الكلي · شامل المحقق|Total P/L · including realized')+'</small><b class="'+(total>=0?'up':'down')+'">'+fm(total)+'</b><div class="capital-pl-breakdown"><span><small>'+_('محقق|Realized')+'</small><b>'+fm(realized)+'</b></span><span><small>'+_('غير محقق|Unrealized')+'</small><b>'+fm(unrealized)+'</b></span></div></div></div>'+
-  '<div class="capital-legend"><span><i class="invested"></i>'+_('المبلغ المستثمر|Invested amount')+'</span><span><i class="current"></i>'+_('القيمة الحالية|Current value')+'</span></div>'+list+
-  '<div class="gold-trend-note">'+_('يعرض الرسم رأس المال المستثمر مقابل القيمة الحالية لكل أصل، مع احتساب الربح/الخسارة المحقق وغير المحقق. لا يعرض سعر الذهب العالمي أو حركة XAU/USD.|This chart compares invested capital with current value for each asset and includes realized and unrealized profit/loss. It does not show the global gold price or XAU/USD movement.')+'</div></div>';
+ const rows=portfolioPLRows(assets||[]);
+ if(!rows.length)return "<div class=\"market-empty\"><span class=\"market-empty-icon\">↗</span><b>"+_("لا توجد استثمارات مسجلة لعرض رأس المال والربح والخسارة|No investments are recorded to show invested capital and profit or loss")+"</b><small>"+_("أضف أصلًا وسجّل عمليات الشراء لعرض المقارنة.|Add an asset and record purchases to compare invested capital with its current value.")+"</small></div>";
+ const invested=rows.reduce((sum,row)=>sum+row.invested,0),current=rows.reduce((sum,row)=>sum+row.current,0);
+ const realized=rows.reduce((sum,row)=>sum+row.realized,0),unrealized=rows.reduce((sum,row)=>sum+row.unrealized,0);
+ const total=rows.reduce((sum,row)=>sum+row.total,0),max=Math.max(1,...rows.flatMap(row=>[row.invested,row.current]));
+ const W=760,H=316,L=86,R=24,T=24,B=66,bottom=H-B,plotW=W-L-R,plotH=bottom-T;
+ const x=i=>rows.length===1?L+plotW/2:L+i/(rows.length-1)*plotW,y=value=>bottom-Math.max(0,value)/max*plotH;
+ const investedPoints=rows.map((row,i)=>[x(i),y(row.invested)]),currentPoints=rows.map((row,i)=>[x(i),y(row.current)]);
+ const path=points=>points.length>1?sm(points):"M "+points[0][0]+" "+points[0][1];
+ const investedPath=path(investedPoints),currentPath=path(currentPoints);
+ const area=rows.length>1?currentPath+" L "+currentPoints[currentPoints.length-1][0]+" "+bottom+" L "+currentPoints[0][0]+" "+bottom+" Z":"";
+ const selectedIndex=Number.isInteger(CAP_SELECTED)?Math.max(0,Math.min(rows.length-1,CAP_SELECTED)):0,selected=rows[selectedIndex];
+ const escapeHtml=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+ const gradId="capitalArea"+(seq++);
+ const grid=[0,1,2,3,4].map(i=>{const value=max*(1-i/4),yy=T+i*plotH/4;return "<line x1=\""+L+"\" x2=\""+(W-R)+"\" y1=\""+yy+"\" y2=\""+yy+"\" class=\"capital-gridline\"/><text x=\""+(L-12)+"\" y=\""+(yy+4)+"\" text-anchor=\"end\" class=\"capital-axis-label\">"+escapeHtml(fm(value))+"</text>";}).join("");
+ const labels=rows.map((row,i)=>{const shortName=row.name.length>14?row.name.slice(0,13)+"…":row.name;return "<text x=\""+x(i)+"\" y=\""+(H-29)+"\" text-anchor=\"middle\" class=\"capital-x-label\"><title>"+escapeHtml(row.name)+"</title>"+escapeHtml(shortName)+"</text>";}).join("");
+ const dots=rows.map((row,i)=>{
+  const active=i===selectedIndex?" is-selected":"",name=escapeHtml(row.name);
+  const investedTitle=name+" · "+_("المستثمر|Invested")+" "+fm(row.invested)+" · "+_("القيمة الحالية|Current value")+" "+fm(row.current);
+  const currentTitle=name+" · "+_("القيمة الحالية|Current value")+" "+fm(row.current)+" · "+_("الربح/الخسارة|P/L")+" "+fm(row.total);
+  return "<circle class=\"capital-dot capital-dot-invested"+active+"\" cx=\""+x(i)+"\" cy=\""+y(row.invested)+"\" r=\"5.5\" tabindex=\"0\" role=\"button\" data-a=\"capitalPoint\" data-v=\""+i+"\" aria-label=\""+escapeHtml(investedTitle)+"\"><title>"+escapeHtml(investedTitle)+"</title></circle>"+
+   "<circle class=\"capital-dot capital-dot-current"+active+"\" cx=\""+x(i)+"\" cy=\""+y(row.current)+"\" r=\"6.5\" tabindex=\"0\" role=\"button\" data-a=\"capitalPoint\" data-v=\""+i+"\" aria-label=\""+escapeHtml(currentTitle)+"\"><title>"+escapeHtml(currentTitle)+"</title></circle>";
+ }).join("");
+ const pairConnector=rows.length===1?"<line x1=\""+x(0)+"\" x2=\""+x(0)+"\" y1=\""+y(rows[0].invested)+"\" y2=\""+y(rows[0].current)+"\" class=\"capital-pair-connector\"/>":"";
+ const selectedTone=selected.total>=0?"up":"down";
+ return "<div class=\"portfolio-pl capital-chart\"><div class=\"capital-summary\"><div><small>"+_("إجمالي المبالغ المستثمرة|Total invested capital")+"</small><b>"+fm(invested)+"</b></div>"+
+  "<div><small>"+_("القيمة الحالية للاستثمارات|Current investment value")+"</small><b>"+fm(current)+"</b></div>"+
+  "<div><small>"+_("الربح/الخسارة الكلي · شامل المحقق|Total P/L · including realized")+"</small><b class=\""+(total>=0?"up":"down")+"\">"+fm(total)+"</b><div class=\"capital-pl-breakdown\"><span><small>"+_("محقق|Realized")+"</small><b>"+fm(realized)+"</b></span><span><small>"+_("غير محقق|Unrealized")+"</small><b>"+fm(unrealized)+"</b></span></div></div></div>"+
+  "<div class=\"capital-line-legend\"><span><i class=\"invested\"></i>"+_("رأس المال المستثمر|Invested capital")+"</span><span><i class=\"current\"></i>"+_("القيمة الحالية|Current value")+"</span></div>"+
+  "<svg class=\"capital-line-chart\" viewBox=\"0 0 "+W+" "+H+"\" role=\"group\" aria-label=\""+_("مقارنة خطية لرأس المال المستثمر والقيمة الحالية لكل أصل|Line comparison of invested capital and current value by asset")+"\"><defs><linearGradient id=\""+gradId+"\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"var(--g)\" stop-opacity=\".2\"/><stop offset=\"100%\" stop-color=\"var(--g)\" stop-opacity=\"0\"/></linearGradient></defs>"+
+  grid+(area?"<path d=\""+area+"\" class=\"capital-current-area\" fill=\"url(#"+gradId+")\"/>":"")+pairConnector+
+  (rows.length>1?"<path d=\""+investedPath+"\" class=\"capital-series capital-series-invested\"/>":"")+
+  (rows.length>1?"<path d=\""+currentPath+"\" class=\"capital-series capital-series-current\"/>":"")+dots+labels+"</svg>"+
+  "<div class=\"capital-selection\"><div class=\"capital-selection-head\"><b>"+escapeHtml(selected.name)+"</b><span class=\""+selectedTone+"\">"+_("الربح/الخسارة الكلي|Total P/L")+" · "+fm(selected.total)+"</span></div>"+
+  "<div class=\"capital-selection-metrics\"><span><small>"+_("المستثمر|Invested")+"</small><b>"+fm(selected.invested)+"</b></span><span><small>"+_("القيمة الحالية|Current value")+"</small><b>"+fm(selected.current)+"</b></span><span><small>"+_("محقق|Realized")+"</small><b>"+fm(selected.realized)+"</b></span><span><small>"+_("غير محقق|Unrealized")+"</small><b>"+fm(selected.unrealized)+"</b></span></div>"+
+  "<div class=\"capital-selection-hint\">"+_("اضغط على أي نقطة في الرسم لعرض تفاصيل الأصل.|Select any point on the chart to inspect that asset.")+"</div></div>"+
+  "<div class=\"gold-trend-note\">"+_("يعرض الرسم رأس المال المستثمر مقابل القيمة الحالية لكل أصل، مع احتساب الربح/الخسارة المحقق وغير المحقق. لا يعرض سعر الذهب العالمي أو حركة XAU/USD.|This chart compares invested capital with current value for each asset and includes realized and unrealized profit/loss. It does not show the global gold price or XAU/USD movement.")+"</div></div>";
 };
 
 const goldKaratStrip=g=>'<div class="gold-karat-strip">'+[24,22,21,18].map(k=>'<div class="gold-karat-cell"><small>'+k+'K / '+_('جرام|g')+'</small><b>'+fm(cv(gUSDg()*PUR[k],'USD',S.base))+'</b></div>').join('')+'</div>';
@@ -728,27 +800,34 @@ const card=g=>{const t=cv(g.target,g.cur),s=sv(g),p=s/t*100,left=Math.max(0,t-s)
 return hd('بناء الثروة والأهداف|Wealth & goals','املأ أهدافك دائرة بعد دائرة|Fill your goals, one ring at a time',addb('goal','هدف جديد|New goal'))+`<div class="g k">${kc('إجمالي المدخرات|Total saved',savT(),'',gr,'var(--gd)')}${kc('مدخرات الشهر|This month',m[c],'',m,'var(--gd)')}${kc('نسبة الادخار|Saving rate',I[c]?m[c]/I[c]*100:0,'',null,'#a0a4ad','','%')}</div>
 <div class="g c2"><div class=cd><h4>Savings Growth</h4>${line(gr.slice(0,c+1),'var(--gd)')}</div><div class=cd><h4>Monthly Savings</h4>${bars(m,'var(--gd)')}</div></div><div class="g c2">${S.goals.filter(g=>!g.archived).map(card).join('')||`<p class=em>${_('أنشئ هدفك الأول|Create your first goal')}</p>`}${S.goals.some(g=>g.archived)?`<h3>${_('أهداف مؤرشفة|Archived goals')}</h3><div class="g c2">${S.goals.filter(g=>g.archived).map(g=>`<div class=cd><b>${g.n}</b><small class=bc>${_('الرصيد المحفوظ|Preserved balance')} · ${fm(sv(g),g.cur)}</small><button class=bt data-a=restoreGoal data-v=${g.id}>${_('استعادة|Restore')}</button></div>`).join('')}</div>`:''}</div>`};
 PG.invest=()=>{
- const A=S.inv.map(a=>({a,p:pos(a)})),v=invV(),gr=Z(A.map(z=>z.p.q*(PUR[z.a.karat||24]||.999))),plRows=portfolioPLRows(A),pl=Z(plRows.map(row=>row.total));
- const grossCapital=Z(A.map(({a})=>{const buys=Z(S.tx.filter(r=>r.ref==a.id&&r.t=='buy').map(r=>cv(r.a,r.c,a.cur)));return cv((+a.c0||0)+buys,a.cur)}));
- const roi=grossCapital?pl/grossCapital*100:null;
- const by=GT.map((s,i)=>({l:_(s),v:Z(A.filter(z=>(z.a.type||0)==i).map(z=>cv(z.p.v,z.a.cur))),c:PAL[i]})).filter(z=>z.v>0),g=S.gold;
- const controls=addb('asset','إضافة ذهب|Add gold')+'<button class=bt data-a=lv>'+_('تحديث الآن|Refresh')+'</button><button class=bt data-a=gold>'+_('سعر يدوي|Manual price')+'</button>';
- const headers=['الأصل|Asset','الجرامات|Grams','متوسط التكلفة/جم|Avg cost/g','السعر/جم|Price/g','القيمة|Value','ربح/خسارة كلي|Total P/L',''].map(h=>'<th>'+_(h)+'</th>').join('');
+ const A=S.inv.map(a=>({a,p:pos(a)})),v=invV(),gr=Z(A.map(z=>z.p.q*(PUR[z.a.karat||24]||.999)));
+ const by=GT.map((s,i)=>({l:_(s),v:Z(A.filter(z=>(z.a.type||0)==i).map(z=>cv(z.p.v,z.a.cur))),c:PAL[i]})).filter(z=>z.v>0);
+ const g=S.gold,esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+ const controls=addb("asset","إضافة ذهب|Add gold")+'<button class=bt data-a=lv>'+_("تحديث الآن|Refresh")+'</button><button class=bt data-a=gold>'+_("سعر يدوي|Manual price")+'</button>';
+ const headers=["الأصل|Asset","الجرامات|Grams","متوسط التكلفة/جم|Avg cost/g","السعر/جم|Price/g","القيمة الحالية|Current value","ربح/خسارة كلي|Total P/L","الإجراءات|Actions"].map(h=>"<th>"+_(h)+"</th>").join("");
  const rows=A.map(({a,p})=>{
   const unrealized=p.v-p.c,total=unrealized+p.pl;
-  return '<tr><td>'+a.n+'<small>'+_(GT[a.type||0]||GT[5])+' · '+(a.karat||24)+'K</small></td>'+
-   '<td>'+p.q.toFixed(2)+'</td><td>'+(p.q?fm(p.c/p.q,a.cur):'—')+'</td><td>'+fm(gp(a),a.cur)+'</td><td class=am>'+fm(p.v,a.cur)+'</td>'+
-   '<td class=am style="color:'+(total>=0?'#16a34a':'#dc2626')+'">'+fm(total,a.cur)+'<small>'+_('محقق|Realized')+' '+fm(p.pl,a.cur)+' · '+_('غير محقق|Unrealized')+' '+fm(unrealized,a.cur)+'</small></td>'+
-   '<td><div class=cht>'+(a.archived?'<small class=bc>'+_('مؤرشف|Archived')+'</small><button class=bt data-a=restoreInvestment data-v='+a.id+'>'+_('استعادة|Restore')+'</button>':'<button class=ib data-a=ib data-v='+a.id+'>＋</button><button class=ib data-a=is data-v='+a.id+'>−</button><button class=ib data-a=ip data-v='+a.id+'>✎</button><button class=ib data-a=di data-v='+a.id+'>✕</button>')+'</div></td></tr>';
- }).join('')||'<tr><td colspan=7 class=em>'+_('لا ذهب مسجل|No gold yet')+'</td></tr>';
- return hd('الذهب — ذكاء الاستثمار|Gold — investment intelligence','محفظتك من الذهب فقط، مسعّرة بالأونصة العالمية|A gold-only portfolio priced off the global ounce',controls)+
+  const actions=a.archived?'<small class=bc>'+_("مؤرشف|Archived")+'</small><button class=bt data-a=restoreInvestment data-v="'+a.id+'">'+_("استعادة|Restore")+'</button>':
+   '<button class=ib data-a=ib data-v="'+a.id+'" title="'+_("شراء ذهب|Buy gold")+'" aria-label="'+_("شراء ذهب|Buy gold")+'">＋</button>'+
+   '<button class=ib data-a=is data-v="'+a.id+'" title="'+_("بيع ذهب|Sell gold")+'" aria-label="'+_("بيع ذهب|Sell gold")+'">−</button>'+
+   '<button class=ib data-a=ip data-v="'+a.id+'" title="'+_("تعديل الأصل|Edit asset")+'" aria-label="'+_("تعديل الأصل|Edit asset")+'">✎</button>'+
+   '<button class=ib data-a=di data-v="'+a.id+'" title="'+_("أرشفة الأصل|Archive asset")+'" aria-label="'+_("أرشفة الأصل|Archive asset")+'">⌑</button>';
+  return "<tr><td>"+esc(a.n)+"<small>"+_(GT[a.type||0]||GT[5])+" · "+(a.karat||24)+"K</small></td><td>"+Number(p.q||0).toFixed(3)+"</td><td>"+(p.q?fm(p.c/p.q,a.cur):"—")+"</td><td>"+fm(gp(a),a.cur)+"</td><td class=am>"+fm(p.v,a.cur)+"</td>"+
+   '<td class=am style="color:'+(total>=0?"#16a34a":"#dc2626")+'">'+fm(total)+'<small>'+_("محقق|Realized")+" "+fm(p.pl)+" · "+_("غير محقق|Unrealized")+" "+fm(unrealized)+"</small></td><td><div class=cht>'+actions+"</div></td></tr>";
+ }).join("")||'<tr><td colspan=7 class=em>'+_("لا ذهب مسجل|No gold yet")+"</td></tr>";
+ const assetIds=new Set(S.inv.map(a=>String(a.id)));
+ const history=S.tx.filter(r=>(r.t==="buy"||r.t==="sell")&&assetIds.has(String(r.ref))&&!r.is_voided)
+  .sort((a,b)=>String(b.d||"").localeCompare(String(a.d||""))||Number(b.id||0)-Number(a.id||0)).slice(0,40);
+ const historyRows=history.map(r=>"<tr><td>"+r.d+"</td><td>"+(r.t==="buy"?_("شراء|Purchase"):_("بيع|Sale"))+"</td><td>"+esc(nm(S.inv,r.ref))+"</td><td>"+Number(r.q||0).toFixed(4)+" g</td><td class=am>"+fm(r.a,r.c)+"</td><td>"+esc(nm(S.accs,r.acc))+"</td>"+
+  '<td><div class=cht><button class=ib data-a=ed data-v="'+r.id+'" title="'+_("تعديل العملية|Edit transaction")+'" aria-label="'+_("تعديل العملية|Edit transaction")+'">✎</button><button class=ib data-a=del data-v="'+r.id+'" title="'+_("حذف مع عكس الأثر|Delete and reverse")+'" aria-label="'+_("حذف مع عكس الأثر|Delete and reverse")+'">✕</button></div></td></tr>').join("")||
+  '<tr><td colspan=7 class=em>'+_("لا توجد عمليات شراء أو بيع مسجلة بعد|No purchase or sale transactions yet")+"</td></tr>";
+ return hd("الذهب — ذكاء الاستثمار|Gold — investment intelligence","محفظتك من الذهب فقط، مسعّرة بالأونصة العالمية|A gold-only portfolio priced off the global ounce",controls)+
   goldHeroCard(g)+goldKaratStrip(g)+
-  '<div class="cd market-card investment-capital-card"><div class="market-title"><div><h4>'+_('رأس المال المستثمر والربح والخسارة|Invested capital and portfolio profit/loss')+'</h4><small>'+_('مقارنة المبالغ المستثمرة بالقيمة الحالية للمحفظة|Invested amounts compared with current portfolio value')+'</small></div><span class="market-live"><i></i>'+_('بيانات المحفظة|Portfolio data')+'</span></div>'+portfolioPLChart(A)+'</div>'+
-  '<div class="g k">'+kc('قيمة المحفظة|Portfolio value',v,'',null,'var(--g)')+kc('الأرباح/الخسائر|Total P/L',pl,chip(roi),null,pl>=0?'#16a34a':'#dc2626')+kc('ذهب صافٍ|Pure gold',gr,'',null,'var(--g)','',' g')+'</div>'+
-  '<div class="g c2 q"><div class=cd><h4>'+_('ربح وخسارة المحفظة حسب الأصل|Portfolio P/L by asset')+'</h4>'+portfolioPLChart(A)+'</div><div class=cd><h4>'+_('توزيع الذهب|Gold allocation')+'</h4>'+donut(by)+'</div></div>'+
-  '<div class=cd><div class=sc><table><thead><tr>'+headers+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  '<div class="g c2 q investment-insights"><div class="cd investment-capital-card"><div class="market-title"><div><h4>'+_("رأس المال المستثمر والربح والخسارة حسب الأصل|Invested capital and profit/loss by asset")+'</h4><small>'+_("مقارنة رأس المال المستثمر بالقيمة الحالية مع فصل المحقق وغير المحقق|Compare invested capital with current value, separating realized and unrealized P/L")+'</small></div><span class="market-live"><i></i>'+_("بيانات المحفظة|Portfolio data")+"</span></div>"+portfolioPLChart(A)+'</div>'+
+  '<div class=cd><div class=market-title><div><h4>'+_("توزيع الذهب|Gold allocation")+'</h4><small>'+_("توزيع القيمة الحالية حسب نوع الذهب|Current value by gold type")+"</small></div></div>"+donut(by)+'<div class=gold-weight-chip><small>'+_("صافي وزن الذهب|Net gold weight")+'</small><bdi>'+gr.toFixed(3)+" g</bdi></div></div></div>"+
+  '<div class=cd><div class=market-title><div><h4>'+_("الأصول الذهبية|Gold assets")+'</h4><small>'+_("عدّل بيانات الأصل أو أرشفه مع الاحتفاظ بسجل عملياته|Edit an asset or archive it while preserving its transaction history")+"</small></div></div><div class=sc><table><thead><tr>'+headers+"</tr></thead><tbody>"+rows+"</tbody></table></div></div>"+
+  '<div class=cd investment-history><div class=market-title><div><h4>'+_("سجل عمليات الاستثمار|Investment transaction history")+'</h4><small>'+_("يمكن تعديل الشراء أو البيع، أو حذفه مع عكس أثره على الأرصدة|Edit a purchase or sale, or delete it with the balance impact reversed")+"</small></div></div><div class=sc><table><thead><tr>'+["التاريخ|Date","الحركة|Movement","الأصل|Asset","الكمية|Quantity","المبلغ|Amount","الحساب|Account","الإجراءات|Actions"].map(h=>"<th>"+_(h)+"</th>").join("")+"</tr></thead><tbody>"+historyRows+"</tbody></table></div></div>";
 };
-PG.accounts=()=>`${hd('أموالك في كل مكان|All your money','النقد والبنوك والمحافظ في مكان واحد|Cash, banks and wallets together',addb('acc','حساب جديد|New account')+`<button class=bt data-a=add data-v=trf>⇄ ${_('تحويل|Transfer')}</button>`)}<div class="g c2"><div class=cd><h4>${_('التوزيع|Distribution')}</h4>${donut(S.accs.map((a,i)=>({l:a.n,v:Math.max(0,balB(a)),c:PAL[i+2]})))}</div><div class=cd><h4>${_('إجمالي الأرصدة|Total balance')}</h4><b class=n data-n=${accT()} style="font-size:28px">${fm(accT())}</b><p class=bc>${_('التحويل بين الحسابات لا يُحتسب دخلًا ولا مصروفًا.|Transfers are never counted as income or expense.')}</p></div></div><div class="g c2">${S.accs.filter(a=>!a.archived).map(a=>`<div class=cd><div class=ft><span class=cb>${SYM[a.cur]}</span><b style="flex:1;margin-inline:10px">${a.n}</b><span class=bc>${_({cash:'نقدية|Cash',bank:'بنك|Bank',wallet:'محفظة|Wallet',savings:'ادخار|Savings',other:'أخرى|Other'}[a.t])}</span></div><b class=n data-n=${bal(a)} style="font-size:22px">${fm(bal(a),a.cur)}</b>${S.tx.filter(r=>eff(r,a.id)).sort((x,y)=>y.d.localeCompare(x.d)).slice(0,3).map(r=>`<div class=row>${r.d}<span>${lab(r)}</span><b>${fm(r.a,r.c)}</b></div>`).join('')}<button class=bt style="margin-top:8px" data-a=da data-v=${a.id}>${_('أرشفة|Archive')}</button></div>`).join('')}</div>${S.accs.some(a=>a.archived)?`<h3>${_('حسابات مؤرشفة|Archived accounts')}</h3><div class="g c2">${S.accs.filter(a=>a.archived).map(a=>`<div class=cd><b>${a.n}</b><small class=bc>${fm(bal(a),a.cur)}</small><button class=bt data-a=restoreWallet data-v=${a.id}>${_('استعادة|Restore')}</button></div>`).join('')}</div>`:''}`;
 PG.budgets=()=>`${hd('تحكم في الإنفاق|Control spending','حدد سقفًا لكل تصنيف وتابع الاستهلاك|Set a limit per category and watch usage',addb('bud','ميزانية جديدة|New budget'))}<div class="g c2">${S.bud.map(b=>{const l=cv(b.l,b.cur),s=spent(b),p=s/l*100,col=p>=90?'#c2453d':'var(--g)';return `<div class=cd><div class=ft><b>${b.name||_(CAT[b.ci])}</b><span class=bc>${_({m:'شهرية|Monthly',w:'أسبوعية|Weekly',y:'سنوية|Yearly'}[b.p])}</span></div><small class=bc>${_(CAT[b.ci])}${b.accountId?' · '+nm(S.accs,b.accountId):''}</small><div style="position:relative">${pb(p,col,'fl')}${[50,75,90].map(t=>`<i style="position:absolute;top:-2px;inset-inline-start:${t}%;height:13px;width:1px;background:var(--mut)"></i>`).join('')}</div><div class=ft style="margin-top:6px"><span>${fm(s)} / ${fm(l)}</span><b style="color:${col}">${p.toFixed(0)}%</b></div><small class=bc>${_('المتبقي|Left')} ${fm(Math.max(0,l-s))}</small> <button class=ib data-a=db data-v=${b.id}>✕</button></div>`}).join('')}</div>`;
 function reportRows(){const r=R,y=S.year,f=x=>(!r.c||x.c==r.c)&&(!r.k||x.cat==r.k)&&(!+r.m||+x.d.slice(5,7)==+r.m);const per=t=>{const a=Array(12).fill(0),n=Array(12).fill(0);S.tx.filter(x=>x.t==t&&+x.d.slice(0,4)==y&&f(x)).forEach(x=>{a[+x.d.slice(5,7)-1]+=B(x);n[+x.d.slice(5,7)-1]++});return[a,n]};
 const keep=i=>!+r.m||i==r.m-1;
@@ -843,6 +922,7 @@ async del(id){
  const r=S.tx.find(z=>String(z.id)===String(id));if(!r)return;
  if(!confirm(_('تأكيد حذف المعاملة؟ سيتم عكس أثرها على الأرصدة مع الاحتفاظ بسجل التصحيح.|Delete this transaction? Its balance impact will be reversed and a correction record retained.')))return;
  try{
+  if(r.t==='buy'&&!investmentLedgerValidAfterEdit(r.ref,r.id,null))throw new Error(_('لا يمكن حذف عملية شراء تعتمد عليها مبيعات لاحقة؛ صحح عمليات البيع أولًا.|This purchase is required by later sales. Correct those sales first.'));
   if(CLOUD_USER){
    if(!navigator.onLine||CLOUD_OFFLINE)throw new Error(_('اتصل بالإنترنت قبل حذف معاملة سحابية. لم يتم إجراء أي تغيير.|Connect to the internet before deleting a cloud transaction. No change was made.'));
    if(!await cloudEnsureClient())throw new Error('Supabase client is unavailable.');
@@ -858,13 +938,13 @@ async del(id){
 },
 ed(id){
  const r=S.tx.find(z=>String(z.id)===String(id));if(!r)return;
- const f=[['a',_('المبلغ|Amount'),'number',,Math.abs(Number(r.a))],['c',_('العملة|Currency'),'s',CUR,r.c],['d',_('التاريخ|Date'),'date',,r.d],['acc',_('حساب الخصم أو الإيداع|Source account'),'s',AO(),r.acc]];
+ const f=[['a',_('المبلغ|Amount'),'number',,Math.abs(Number(r.a))],['c',_('العملة|Currency'),'s',CUR,r.c],['d',_('التاريخ|Date'),'date',,r.d],['acc',_('حساب الخصم أو الإيداع|Source account'),'s',S.accs.filter(a=>!a.archived||String(a.id)===String(r.acc)).map(a=>[a.id,a.n+' · '+a.cur]),r.acc]];
  if(r.t==='inc')f.push(['cat',_('مصدر الدخل|Income source'),'s',SRC.map((s,i)=>[i,_(s)]),r.cat]);
  if(r.t==='exp')f.push(['cat',_('تصنيف المصروف|Expense category'),'s',CAT.map((s,i)=>[i,_(s)]),r.cat]);
  if(r.t==='trf')f.push(['ref',_('الحساب المستلم|Destination account'),'s',AO(),r.ref],['ta',_('المبلغ الذي يصل للحساب المستلم|Amount received'),'number',,r.ta==null?Math.abs(Number(r.a)):r.ta]);
  if(r.t==='sav')f.push(['flow',_('نوع الحركة|Movement'),'s',[['in',_('إيداع في الادخار|Deposit to savings')],['out',_('سحب من الادخار|Withdraw from savings')]],Number(r.a)<0?'out':'in'],['ref',_('هدف الادخار|Savings goal'),'s',S.goals.filter(g=>!g.archived).map(g=>[g.id,g.n]),r.ref]);
  if(r.t==='pay')f.push(['ref',_('القرض أو الدين|Loan or debt'),'s',S.loans.filter(l=>!l.archived).map(l=>[l.id,l.n]),r.ref]);
- if(r.t==='buy'||r.t==='sell')f.push(['ref',_('الأصل الاستثماري|Investment asset'),'s',S.inv.filter(a=>!a.archived).map(a=>[a.id,a.n]),r.ref],['q',_('الكمية|Quantity'),'number',,r.q||'']);
+ if(r.t==='buy'||r.t==='sell')f.push(['ref',_('الأصل الاستثماري|Investment asset'),'s',S.inv.filter(a=>!a.archived||String(a.id)===String(r.ref)).map(a=>[a.id,a.n]),r.ref],['q',_('الكمية|Quantity'),'number',,r.q||'']);
  f.push(['note',_('الوصف|Description'),'text',,r.note||'']);
  if(r.t==='inc'||r.t==='exp')f.push(['rec',_('مصروف/دخل متكرر|Recurring'),'checkbox',,!!r.rec]);
  form(_('تعديل المعاملة|Edit transaction'),f,async v=>{
@@ -881,7 +961,7 @@ ed(id){
   }
   if(r.t==='sav'){const goal=S.goals.find(g=>String(g.id)===String(v.ref));if(!goal||goal.cur!==source.cur){toast(_('عملة هدف الادخار يجب أن تطابق عملة الحساب.|Savings goal currency must match the account.'));return false;}next.ref=v.ref;}
   if(r.t==='pay'){const loan=S.loans.find(l=>String(l.id)===String(v.ref));if(!loan||loan.cur!==source.cur){toast(_('عملة الدين يجب أن تطابق عملة الحساب.|Debt currency must match the account.'));return false;}next.ref=v.ref;}
-  if(r.t==='buy'||r.t==='sell'){const asset=S.inv.find(a=>String(a.id)===String(v.ref));next.q=Number(v.q);if(!asset||asset.cur!==source.cur||!(next.q>0)||!Number.isFinite(next.q)){toast(_('تحقق من الأصل والعملة والكمية.|Check the asset, currency and quantity.'));return false;}if(r.t==='sell'&&next.q>pos(asset).q+1e-9){toast(_('كمية البيع أكبر من الكمية المتاحة.|Sale quantity exceeds the available position.'));return false;}next.ref=v.ref;}
+  if(r.t==='buy'||r.t==='sell'){const asset=S.inv.find(a=>String(a.id)===String(v.ref));next.q=Number(v.q);if(!asset||asset.cur!==source.cur||!(next.q>0)||!Number.isFinite(next.q)){toast(_('تحقق من الأصل والعملة والكمية.|Check the asset, currency and quantity.'));return false;}next.ref=v.ref;if(!investmentLedgerValidAfterEdit(r.ref,r.id,next)||String(v.ref)!==String(r.ref)&&!investmentLedgerValidAfterEdit(v.ref,r.id,next)){toast(_('هذا التعديل يجعل إحدى عمليات البيع تتجاوز كمية الذهب المتاحة. راجع كميات العمليات وتواريخها أولًا.|This correction would make a sale exceed the available gold quantity. Review transaction quantities and dates first.'));return false;}}
   if(!confirm(_('تأكيد تعديل المعاملة؟ سيتم عكس الحركة السابقة وتسجيل القيمة الجديدة مع تحديث الأرصدة.|Confirm this correction? The previous movement will be reversed and the corrected value reposted to the balances.')))return false;
   if(CLOUD_USER){
    await cloudEditTransaction(r,next);toast(_('تم تصحيح المعاملة وتحديث الأرصدة.|Transaction corrected and balances refreshed.'));
@@ -908,7 +988,7 @@ el(id){
   return true;
  })
 },
-lv(){live(1)},goldRange(v){GOLD_RANGE=Math.max(12,Math.min(60,Number(v)||30));GOLD_SELECTED=-1;build()},goldPoint(v){GOLD_SELECTED=Number(v);build()},mo(v){MO=+v;NA=1;build();NA=0},af(v){AF=v;build()},swp(){[EX.f,EX.t]=[EX.t,EX.f];build()},gold(){form(_('سعر الأونصة بالدولار|Spot price per oz (USD)'),[['p',_('السعر|Price'),'number',,S.gold.usd.toFixed(2)]],v=>{if(!(+v.p>0))return false;S.gold={...S.gold,usd:+v.p,t:new Date().toISOString(),src:'manual'};goldRecordObservation(+v.p,S.gold.t,'manual')})},th(v){S.th=v;save();build()},thn(){const L=['gold','ruby','emerald','cobalt','violet','sunset'];S.th=L[(L.indexOf(S.th)+1)%L.length];save();build()},ct(v){S.ct=v;save();build()},auto(){S.man={};save();live(1)},srch(q){q=(q||'').toLowerCase().trim();if(!q)return;const m=S.tx.filter(r=>(lab(r)+' '+(r.note||'')+' '+r.d+' '+r.a+' '+_(TL[r.t])).toLowerCase().includes(q)).sort((a,b)=>b.d.localeCompare(a.d)).slice(0,15),o=document.createElement('div');o.className='ov';o.innerHTML=`<div class=md><h3>${_('نتائج البحث|Search results')}: ${m.length}</h3>${m.map(r=>`<div class=row>${r.d}<span class="ch2 up">${_(TL[r.t])}</span><span>${lab(r)}</span><b>${fm(r.a,r.c)}</b></div>`).join('')||`<p class=em>${_('لا نتائج|No results')}</p>`}<div class=ac><button class=bt data-a=cl>OK</button></div></div>`;document.body.append(o)},go(v){AV=v;AM=v=='signup'?'up':'in';build()},guest(){S.localGuest=true;S.auth=1;S.seen=1;S.onb=1;save();location.hash='#/home';welcome()},skip(){S.onb=1;save();AV='start';build()},onbn(){if(OB<2){OB++;DIR=1;build()}else A.skip()},ob(i){DIR=i>OB?1:-1;OB=+i;build()},
+lv(){live(1)},goldRange(v){GOLD_RANGE=Math.max(12,Math.min(60,Number(v)||30));GOLD_SELECTED=-1;build()},goldPoint(v){GOLD_SELECTED=Number(v);build()},capitalPoint(v){CAP_SELECTED=Math.max(0,Number(v)||0);build()},mo(v){MO=+v;NA=1;build();NA=0},af(v){AF=v;build()},swp(){[EX.f,EX.t]=[EX.t,EX.f];build()},gold(){form(_('سعر الأونصة بالدولار|Spot price per oz (USD)'),[['p',_('السعر|Price'),'number',,S.gold.usd.toFixed(2)]],v=>{if(!(+v.p>0))return false;S.gold={...S.gold,usd:+v.p,t:new Date().toISOString(),src:'manual'};goldRecordObservation(+v.p,S.gold.t,'manual')})},th(v){S.th=v;save();build()},thn(){const L=['gold','ruby','emerald','cobalt','violet','sunset'];S.th=L[(L.indexOf(S.th)+1)%L.length];save();build()},ct(v){S.ct=v;save();build()},auto(){S.man={};save();live(1)},srch(q){q=(q||'').toLowerCase().trim();if(!q)return;const m=S.tx.filter(r=>(lab(r)+' '+(r.note||'')+' '+r.d+' '+r.a+' '+_(TL[r.t])).toLowerCase().includes(q)).sort((a,b)=>b.d.localeCompare(a.d)).slice(0,15),o=document.createElement('div');o.className='ov';o.innerHTML=`<div class=md><h3>${_('نتائج البحث|Search results')}: ${m.length}</h3>${m.map(r=>`<div class=row>${r.d}<span class="ch2 up">${_(TL[r.t])}</span><span>${lab(r)}</span><b>${fm(r.a,r.c)}</b></div>`).join('')||`<p class=em>${_('لا نتائج|No results')}</p>`}<div class=ac><button class=bt data-a=cl>OK</button></div></div>`;document.body.append(o)},go(v){AV=v;AM=v=='signup'?'up':'in';build()},guest(){S.localGuest=true;S.auth=1;S.seen=1;S.onb=1;save();location.hash='#/home';welcome()},skip(){S.onb=1;save();AV='start';build()},onbn(){if(OB<2){OB++;DIR=1;build()}else A.skip()},ob(i){DIR=i>OB?1:-1;OB=+i;build()},
 sw(dx){if(Math.abs(dx)<50)return;const nx=(dx<0)==(S.lang!='ar'),t=OB+(nx?1:-1);if(t<0||t>2)return;DIR=nx?1:-1;OB=t;build()},eye(){const i=$('#pw');i.type=i.type=='password'?'text':'password'},
 str(v){const sc=(v.length>=8)+/[A-Z]/.test(v)+/\d/.test(v)+/[^A-Za-z0-9]/.test(v),b=$('#smb'),l=$('#sml');if(!b)return;b.style.width=(v?Math.max(12,sc*25):0)+'%';b.style.background=['#c2453d','#c2453d','#e0a63b','var(--g)','var(--g)'][sc];l.textContent=v?[_('ضعيفة|Weak'),_('ضعيفة|Weak'),_('متوسطة|Fair'),_('جيدة|Good'),_('قوية|Strong')][sc]:''},
 async forgot(){if(!SB){toast(_('خدمة المصادقة غير متاحة.|Authentication service unavailable.'));return;}const email=($('#em')||{}).value?.trim().toLowerCase();if(!email){toast(_('أدخل بريدك الإلكتروني أولاً.|Enter your email address first.'));return;}const {error}=await SB.auth.resetPasswordForEmail(email,{redirectTo:WALLET_OS_WEB_ORIGIN+location.pathname});if(error)toast(error.message);else toast(_('أرسلنا رابط إعادة تعيين كلمة المرور إلى بريدك.|Password reset link sent to your email.'));},
@@ -974,7 +1054,7 @@ async di(id){
  if(!confirm(_('أرشفة هذا الأصل؟ ستبقى قيمته وسجل عملياته محفوظين.|Archive this asset? Its value and transaction history will be preserved.')))return;
  try{
   if(CLOUD_USER){await cloudManageItem('investment',id,'archive');toast(_('تمت أرشفة الأصل مع الاحتفاظ بسجله.|Asset archived; its history was preserved.'));}
-  else{if(S.tx.some(r=>r.ref==id&&(r.t=='buy'||r.t=='sell')))return toast(_('للأصل عمليات مسجلة؛ لا يمكن محو سجله.|This asset has transactions and cannot be erased.'));S.inv=S.inv.filter(z=>z.id!=id);save();build();}
+  else{a.archived=true;save();build();toast(_('تمت أرشفة الأصل مع الاحتفاظ بسجل عملياته.|Asset archived; its transaction history was preserved.'));}
  }catch(e){toast(e.message||String(e));}
 },
 async da(id){
@@ -994,7 +1074,7 @@ async db(id){
 },
 restoreLoan(id){cloudManageItem('loan',id,'restore').then(()=>toast(_('تمت استعادة القرض.|Loan restored.'))).catch(e=>toast(e.message||String(e)));},
 restoreGoal(id){cloudManageItem('goal',id,'restore').then(()=>toast(_('تمت استعادة الهدف.|Goal restored.'))).catch(e=>toast(e.message||String(e)));},
-restoreInvestment(id){cloudManageItem('investment',id,'restore').then(()=>toast(_('تمت استعادة الأصل.|Asset restored.'))).catch(e=>toast(e.message||String(e)));},
+restoreInvestment(id){const a=S.inv.find(z=>String(z.id)===String(id));if(!a)return;if(CLOUD_USER){cloudManageItem('investment',id,'restore').then(()=>toast(_('تمت استعادة الأصل.|Asset restored.'))).catch(e=>toast(e.message||String(e)));}else{a.archived=false;save();build();toast(_('تمت استعادة الأصل.|Asset restored.'));}},
 restoreWallet(id){cloudManageItem('wallet',id,'restore').then(()=>toast(_('تمت استعادة الحساب.|Account restored.'))).catch(e=>toast(e.message||String(e)));},
 
 csv(ts){const L=rows(ts.split(',')).map(r=>[r.d,_(TL[r.t]),lab(r),r.a,r.c,nm(S.accs,r.acc),(r.note||'').replace(/[",\n]/g,' ')].join(','));showCsv(['date,type,detail,amount,currency,account,note',...L].join('\n'))},
@@ -1326,7 +1406,7 @@ function landing(){return `<div class="landing-page"><div class="landing-top"><d
 function login(){const up=AM=='up',f=(id,t,l)=>`<label>${l}<input class=in id=${id} type=${t} autocomplete=${t=='password'?(up?'new-password':'current-password'):id=='em'?'email':'name'}></label>`;return `<div class=au><canvas id=hc></canvas><div class=ct><form class=glass onsubmit="event.preventDefault();A.login()"><div class=lg style="padding:0;justify-content:center">${LG(40)}<span>WALLET OS</span></div><div class=cht style="justify-content:center"><button type=button class="bt ${up?'':'gon'}" data-a=am data-v=in>${_('دخول|Sign in')}</button><button type=button class="bt ${up?'gon':''}" data-a=am data-v=up>${_('حساب جديد|Create account')}</button></div>${up?f('un','text',_('الاسم|Name')):''}${f('em','email',_('البريد الإلكتروني|Email'))}${f('pw','password',_('كلمة المرور|Password'))}<button class=gb>${up?_('إنشاء الحساب|Create account'):_('دخول|Sign in')}</button><button type=button class="gb gl" data-a=tologin data-v=guest>${_('متابعة كضيف|Continue as guest')}</button><small>${_('الحساب محلي على هذا الجهاز ولا يُرسل لأي خادم قبل ربط Supabase.|Secure cloud sign-in; financial records sync to your account.')}</small><button type=button class="bt gl" data-a=tolanding>${S.lang=='ar'?'→':'←'}</button></form></div></div>`}
 const OZ=31.1034768,PUR={24:.999,22:.9167,21:.875,18:.75},gUSDg=()=>Number(S.gold.gramUsd)>0?Number(S.gold.gramUsd):S.gold.usd/OZ,gp=a=>a.price!==null&&a.price!==undefined&&Number.isFinite(Number(a.price))?Number(a.price):cv(gUSDg()*(PUR[a.karat||24]||.999),'USD',a.cur);
 const GT=['سبائك ذهب|Gold bars','عملات ذهبية|Gold coins','مشغولات ذهبية|Jewelry','جنيه / ليرة ذهب|Sovereigns','ذهب كسر|Scrap gold','أخرى|Other'];
-let LV={ok:0,fail:0,fx:0,fxTry:0,fxOK:0,dir:0},NA=0,PREV={},FIRST=1,LASTID=0,GOLD_RANGE=30,GOLD_SELECTED=-1;
+let LV={ok:0,fail:0,fx:0,fxTry:0,fxOK:0,dir:0},NA=0,PREV={},FIRST=1,LASTID=0,GOLD_RANGE=30,GOLD_SELECTED=-1,CAP_SELECTED=0;
 async function jf(u){const c=new AbortController(),t=setTimeout(()=>c.abort(),8000);try{const r=await fetch(u,{signal:c.signal,cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(t)}}
 let GOLD_DAILY_TRY=0;
 async function refreshGoldDailyCandles(force){
@@ -1462,6 +1542,7 @@ $('#app').innerHTML=`<div class=ph><aside class="desktop-side"><div class="deskt
 navPos();
 cnt(p);FIRST=0;if(LASTID)setTimeout(()=>LASTID=0,2600);if(NA)$('#pg').classList.add('na');document.querySelectorAll("#pg>*").forEach((e,i)=>e.style.setProperty("--i",Math.min(i,8)));scrollTo(0,y)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&A[b.dataset.a]){const v=b.dataset.v;try{navigator.vibrate(6)}catch(e){}A[b.dataset.a](v,b)}});
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.closest){const b=e.target.closest('[data-a=capitalPoint]');if(b){e.preventDefault();A.capitalPoint(b.dataset.v,b);}}});
 document.addEventListener('pointermove',e=>{const c=e.target.closest&&e.target.closest('.cd');if(c){const q=c.getBoundingClientRect();c.style.setProperty('--mx',e.clientX-q.left+'px');c.style.setProperty('--my',e.clientY-q.top+'px')}});document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key=='k'){e.preventDefault();const i=$('#gs');i&&i.focus()}});document.addEventListener('mouseover',e=>{const b=e.target.closest('.hv');if(b)A.hv(b.dataset.v)});
 addEventListener('hashchange',()=>{Q='';FIRST=1;PREV={};scrollTo(0,0);build()});live();setInterval(()=>{if(!document.hidden)live()},30000);{const l=document.createElement('link');l.rel='icon';l.href='data:image/svg+xml,'+encodeURIComponent(LIT(LG(32)));document.head.append(l)}
 function cloudUseCachedSession(user){
