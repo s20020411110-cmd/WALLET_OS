@@ -87,25 +87,30 @@ test('manual transfers retain both source and destination wallets and remain tra
 });
 
 
-test('budgets accept a user-entered name and an optional linked wallet account', () => {
+test('budgets accept a user-entered name, expense category and optional linked wallet account', () => {
   const start = html.indexOf('function addBud(){');
-  const end = html.indexOf('\nconst IC=', start);
+  const end = html.indexOf('\\nconst IC=', start);
   assert.ok(start >= 0 && end > start, 'budget form should exist');
   const form = html.slice(start, end);
-  assert.match(form, /\['name',_\('اسم الميزانية\|Budget name'\)/);
-  assert.match(form, /\['accountId',_\('الحساب المرتبط/);
+  assert.match(form, /categoryName/);
+  assert.match(form, /تصنيف المصروف \(اكتب يدويًا\)/);
+  assert.match(form, /resolveFinanceCategory\('expense',categoryName\)/);
+  assert.match(form, /accountId/);
   assert.match(form, /name\.length>80/);
+  assert.doesNotMatch(form, /\['ci',[^\n]*'s',CAT/);
 });
 
-test('cloud budget writes and refreshes preserve the custom name and account link', () => {
+test('cloud budget writes and refreshes preserve manual category ID, name and account link', () => {
   assert.match(html, /budget_name:String\(b\.name\|\|''\)\.trim\(\)/);
   assert.match(html, /account_id:b\.accountId\|\|null/);
-  assert.match(html, /name:b\.budget_name\|\|CLOUD_EXPENSE_NAMES/);
-  assert.match(html, /accountId:b\.account_id\|\|null/);
+  assert.match(html, /categoryId=b\.categoryId\|\|cloudCategoryId\('expense',b\.ci\)/);
+  assert.match(html, /categoryId:item\.categoryId\?\(map\[String\(item\.categoryId\)\]\|\|item\.categoryId\):cloudCategoryId/);
+  assert.match(html, /categoryId:b\.category_id/);
 });
 
-test('offline budget queue keeps the entered name and maps a pending account ID at sync', () => {
-  assert.match(html, /kind:'budget',categoryIndex:Number\(b\.ci\),name,accountId/);
+test('offline budget queue maps pending custom category and account IDs before the upsert', () => {
+  assert.match(html, /kind:'budget',categoryIndex:Number\(b\.ci\),categoryId,name,accountId/);
+  assert.match(html, /item\.categoryId\?\(map\[String\(item\.categoryId\)\]\|\|item\.categoryId\)/);
   assert.match(html, /budget_name:item\.name,account_id:item\.accountId\?\(map\[String\(item\.accountId\)\]\|\|item\.accountId\):null/);
 });
 
@@ -187,4 +192,46 @@ test('investment asset edits and permanent deletion bypass archive management', 
   assert.match(html, /Permanently delete this asset/);
   assert.match(html, /purgeInvestmentLocalCopies/);
   assert.doesNotMatch(html, /restoreInvestment\(id\)/);
+});
+
+
+test('manual income and expense categories are persisted as owner-scoped cloud category IDs', () => {
+  assert.match(html, /function resolveFinanceCategory\(direction,name\)/);
+  assert.match(html, /SB\.rpc\('create_finance_category'/);
+  assert.match(html, /if\(t=='inc'\)f\.push\(\['catName'/);
+  assert.match(html, /if\(t=='exp'\)f\.push\(\['catName'/);
+  assert.match(html, /cat=v\.categoryId\|\|cloudCategoryId\(type,v\.cat\)/);
+  assert.match(html, /categoryId= v\.categoryId/);
+});
+
+test('offline custom categories are queued before postings and local category IDs are remapped on sync', () => {
+  assert.match(html, /'create_finance_category'/);
+  assert.match(html, /p_category_id\)if\(out\[k\]!=null\)out\[k\]=map\[String\(out\[k\]\)\]/);
+  assert.match(html, /else if\(name==='create_finance_category'\)/);
+  const syncStart = html.indexOf('async function cloudSyncPending(');
+  const syncEnd = html.indexOf('function cloudLoanKind', syncStart);
+  const sync = html.slice(syncStart, syncEnd);
+  assert.match(sync, /cloudResolveRpcArgs\(item\.args\)/);
+  assert.match(sync, /item\.categoryId\?\(map\[String\(item\.categoryId\)\]\|\|item\.categoryId\)/);
+});
+
+test('account opening balances use the double-entry opening balance RPC and appear in account totals', () => {
+  const start = html.indexOf('function addAcc(){');
+  const end = html.indexOf('const CLOUD_INCOME_NAMES', start);
+  const form = html.slice(start, end);
+  assert.match(form, /p_opening_balance:opening/);
+  assert.match(form, /p_opening_fx_rate:opening>0\?cloudFxRate\(v\.cur\):1/);
+  assert.match(form, /openingBalance:opening/);
+  assert.match(html, /Number\(a\.openingBalance\)\|\|0/);
+  assert.match(html, /PG\.accounts=\(\)=>/);
+  assert.match(html, /postFromAccount\(value\)/);
+});
+
+test('loans and receivables have separate pages and creation paths', () => {
+  assert.match(html, /PG\.loans=\(\)=>\{const rows=LN\(\)/);
+  assert.match(html, /PG\.debts=\(\)=>\{const rows=OW\(\)/);
+  assert.match(html, /function addLoan\(kind='loan'\)/);
+  assert.match(html, /function addDebt\(\)\{addLoan\('owed'\)\}/);
+  assert.match(html, /loan:\(\)=>addLoan\('loan'\),debt:addDebt/);
+  assert.match(html, /card\('debts',[^\n]*'debts'/);
 });
