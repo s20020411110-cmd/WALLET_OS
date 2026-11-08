@@ -29,8 +29,8 @@ class GoldMarketWorker {
     this.setInterval = options.setInterval || setInterval;
     this.clearInterval = options.clearInterval || clearInterval;
     this.log = options.log || console;
-    this.workerId = options.workerId || (globalThis.crypto && crypto.randomUUID
-      ? crypto.randomUUID() : 'gold-worker-' + this.now() + '-' + Math.random().toString(16).slice(2));
+    this.workerId = options.workerId || (globalThis.crypto && globalThis.crypto.randomUUID
+      ? globalThis.crypto.randomUUID() : 'gold-worker-' + this.now() + '-' + Math.random().toString(16).slice(2));
     this.supabaseUrl = String(this.env.SUPABASE_URL || '').replace(/\/+$/, '');
     this.supabaseSecret = this.env.SUPABASE_SECRET_KEY || '';
     this.twelveDataKey = this.env.TWELVE_DATA_API_KEY || '';
