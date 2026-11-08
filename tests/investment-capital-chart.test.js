@@ -114,7 +114,7 @@ test('ledger calculations keep transfers and savings neutral and include archive
       { id: 'cash-eur', cur: 'EUR' }
     ],
     goals: [{ id: 'goal-1' }],
-    inv: [],
+    inv: [{ id: 'gold-1', cur: 'USD', q0: 0, c0: 0 }],
     loans: [
       { id: 'debt-1', kind: 'loan', orig: 200, cur: 'USD' },
       { id: 'debt-archived', kind: 'loan', orig: 40, cur: 'USD', archived: true },
@@ -127,25 +127,33 @@ test('ledger calculations keep transfers and savings neutral and include archive
       { id: '4', t: 'sav', a: 100, c: 'USD', acc: 'cash-usd', ref: 'goal-1' },
       { id: '5', t: 'sav', a: -20, c: 'USD', acc: 'cash-usd', ref: 'goal-1' },
       { id: '6', t: 'pay', a: 50, c: 'USD', acc: 'cash-usd', ref: 'debt-1' },
-      { id: '7', t: 'pay', a: 30, c: 'USD', acc: 'cash-usd', ref: 'receivable-1' }
+      { id: '7', t: 'pay', a: 30, c: 'USD', acc: 'cash-usd', ref: 'receivable-1' },
+      { id: '8', t: 'buy', a: 500, c: 'USD', acc: 'cash-usd', ref: 'gold-1', q: 10, d: '2026-10-01' },
+      { id: '9', t: 'sell', a: 240, c: 'USD', acc: 'cash-usd', ref: 'gold-1', q: 4, d: '2026-10-02' }
     ]
   };
   const rates = { USD: 1, EUR: 100 / 90 };
   const cv = (amount, from, to = 'USD') => Number(amount) * rates[from] / rates[to];
   const sum = rows => rows.reduce((total, row) => total + cv(row.a, row.c), 0);
   const Z = values => values.reduce((total, value) => total + Number(value || 0), 0);
-  const helpers = vm.runInNewContext(source + ';({eff,bal,balB,rem,LN,OW,sv,savT,accT,NW})', {
-    S: state, CLOUD_USER: null, cv, sum, Z
+  const helpers = vm.runInNewContext(source + ';({eff,bal,balB,rem,LN,OW,sv,savT,accT,NW,pos,invV,invC})', {
+    S: state, CLOUD_USER: null, cv, sum, Z, gp: () => 70
   });
-  assert.equal(helpers.bal(state.accs[0]), 600);
+  assert.equal(helpers.bal(state.accs[0]), 340);
   assert.equal(helpers.bal(state.accs[1]), 90);
   assert.equal(helpers.savT(), 80);
+  const position = helpers.pos(state.inv[0]);
+  assert.deepEqual({ quantity: position.q, remainingCost: position.c, realizedProfit: position.pl, marketValue: position.v },
+    { quantity: 6, remainingCost: 300, realizedProfit: 40, marketValue: 420 });
+  assert.equal(helpers.invV(), 420);
+  assert.equal(helpers.invC(), 300);
   assert.equal(helpers.rem(state.loans[0]), 150);
   assert.equal(helpers.rem(state.loans[1]), 40);
   assert.equal(helpers.rem(state.loans[2]), 90);
-  assert.equal(helpers.NW(), 680);
+  assert.equal(helpers.NW(), 840);
   const grossAssets = helpers.NW() + Z(state.loans.filter(loan => loan.kind !== 'owed').map(helpers.rem));
-  assert.equal(grossAssets, 870);
+  assert.equal(grossAssets, 1030);
+  assert.equal(position.pl + position.v - position.c, 160);
   assert.equal(state.tx.filter(tx => tx.t === 'inc').reduce((v, tx) => v + tx.a, 0), 1000);
   assert.equal(state.tx.filter(tx => tx.t === 'exp').reduce((v, tx) => v + tx.a, 0), 200);
   assert.equal(helpers.LN().length, 1, 'archived loan is hidden from active loan lists');
