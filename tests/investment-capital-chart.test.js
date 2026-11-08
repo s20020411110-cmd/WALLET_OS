@@ -71,7 +71,8 @@ test('home dashboard separates seven categories and uses correct asset/income ra
     assert.match(home, new RegExp("card\\('" + key + "'"));
   }
   assert.ok(home.includes('wallet-${key}'));
-  assert.match(home, /assets=NW\(\)\+Z\(S\.loans\.map\(rem\)\)/);
+  assert.match(home, /assets=NW\(\)\+Z\(LN\(\)\.map\(rem\)\)/);
+  assert.doesNotMatch(home, /assets=NW\(\)\+Z\(S\.loans\.map\(rem\)\)/);
   assert.match(home, /key==='income'\|\|key==='expenses'\?I\[c\]:assets/);
   assert.match(home, /key==='income'\?100/);
   assert.match(home, /Math\.abs\(Number\(value\)\|\|0\)\/denominator\*100/);
