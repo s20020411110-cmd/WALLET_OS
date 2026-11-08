@@ -76,8 +76,8 @@ test('loan and savings-goal alert messages are escaped at the final HTML sink', 
   assert.ok(rendererStart >= 0 && rendererEnd > rendererStart, 'alert HTML renderer should exist');
   const alertBuilder = html.slice(alertStart, alertEnd);
   const alertRenderer = html.slice(rendererStart, rendererEnd);
-  assert.match(alertBuilder, /Payment due\|/);
-  assert.match(alertBuilder, /Goal almost done\|/);
+  assert.match(alertBuilder, /موعد سداد\|Payment due/);
+  assert.match(alertBuilder, /هدف يقترب من الاكتمال\|Goal almost done/);
   assert.match(alertRenderer, /\$\{htm\(z\[1\]\)\}/);
   assert.doesNotMatch(alertRenderer, /\$\{z\[1\]\}/);
 });
