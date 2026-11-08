@@ -453,40 +453,9 @@ button,input,select,textarea{font:inherit}
 
 .wallet-overview{margin:12px 0}.wallet-card{display:block;text-decoration:none;color:inherit;min-width:0}.wallet-value{display:block;font-size:clamp(1.2rem,3vw,1.8rem);margin:10px 0 2px;font-weight:800;letter-spacing:-.03em}.wallet-spark{height:42px;overflow:hidden;opacity:.9}.wallet-spark svg{height:42px;width:100%}.wallet-card .ft small{max-width:55%;text-align:end}.wallet-card:active{transform:scale(.985)}
 
-.capital-line-legend{display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:12px 2px 5px;color:var(--mut);font-size:11px}
-.capital-line-legend span{display:inline-flex;align-items:center;gap:7px}
-.capital-line-legend i{width:20px;height:3px;border-radius:9px;display:inline-block}
-.capital-line-legend i.invested{background:#82919e}.capital-line-legend i.current{background:var(--g)}
-.capital-line-chart{display:block;width:100%;height:auto;overflow:visible;direction:ltr;margin-top:3px}
-.capital-gridline{stroke:var(--ln);stroke-width:1;stroke-dasharray:3 6}
-.capital-axis-label,.capital-x-label{fill:var(--mut);font-size:10px;font-variant-numeric:tabular-nums}
-.capital-x-label{font-size:10px}
-.capital-series{fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;animation:capitalLineDraw 1.2s cubic-bezier(.2,.7,.25,1) both}
-.capital-series-invested{stroke:#82919e}
-.capital-series-current{stroke:var(--g);filter:drop-shadow(0 2px 4px color-mix(in srgb,var(--g) 25%,transparent))}
-.capital-current-area{opacity:.9}
-.capital-pair-connector{stroke:var(--mut);stroke-width:2;stroke-dasharray:3 4;opacity:.6}
-.capital-dot{cursor:pointer;stroke:var(--bg);stroke-width:2.5;transition:r .18s ease,stroke-width .18s ease,filter .18s ease;animation:capitalDotIn .55s cubic-bezier(.2,.7,.25,1) both}
-.capital-dot-invested{fill:#82919e}.capital-dot-current{fill:var(--g)}
-.capital-dot.is-selected{r:8;stroke-width:3.5;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--g) 45%,transparent))}
-.capital-dot:focus-visible{outline:none;stroke:var(--ink);stroke-width:4}
-.capital-selection{margin-top:5px;padding:12px 14px;border:1px solid var(--ln);border-radius:14px;background:var(--c);display:grid;gap:10px}
-.capital-selection-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.capital-selection-head b{font-size:13px}.capital-selection-head span{font-size:12px;font-weight:750;direction:ltr}
-.capital-selection-head .up{color:#16a34a}.capital-selection-head .down{color:#dc2626}
-.capital-selection-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.capital-selection-metrics span{display:grid;gap:3px;min-width:0}
-.capital-selection-metrics small{font-size:9px;color:var(--mut)}
-.capital-selection-metrics b{font-size:12px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.capital-selection-hint{font-size:9px;color:var(--mut)}
-.investment-insights{align-items:stretch}.investment-capital-card{min-width:0}
-.gold-weight-chip{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--c);display:flex;justify-content:space-between;gap:12px;align-items:center}
-.gold-weight-chip small{font-size:10px;color:var(--mut)}.gold-weight-chip bdi{font-size:14px;font-weight:750}
 .investment-history table{min-width:720px}.investment-history td small{display:block;color:var(--mut);font-size:9px}
 @keyframes capitalLineDraw{from{stroke-dashoffset:1;opacity:.3}to{stroke-dashoffset:0;opacity:1}}
-@keyframes capitalDotIn{from{transform:scale(.3);opacity:.2}to{transform:scale(1);opacity:1}}
-@media(max-width:560px){.capital-line-chart{min-height:185px}.capital-axis-label,.capital-x-label{font-size:9px}.capital-selection-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.capital-selection{padding:10px}.capital-line-legend{gap:12px;font-size:10px}}
-@media(prefers-reduced-motion:reduce){.capital-series,.capital-dot{animation:none!important;transition:none!important}}
+}
 
 
 /* Focused wealth cards: category hues blend with the selected theme accent. */
