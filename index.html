@@ -1667,15 +1667,16 @@ function goldMarketAgeText(){
  const age=goldMarketQuoteAgeMs();
  if(age===null)return _('لا توجد قراءة|No tick');
  const seconds=Math.floor(age/1000);
- if(seconds<60)return _('قبل|')+seconds+_(' ث|s');
- const minutes=Math.floor(seconds/60);
- return _('قبل|')+minutes+_(' د|m');
+ if(S.lang==='ar')return seconds<60?'قبل '+seconds+' ث':'قبل '+Math.floor(seconds/60)+' د';
+ return seconds<60?seconds+'s ago':Math.floor(seconds/60)+'m ago';
 }
 function goldMarketStatusForUI(){
  const statusAge=GOLD_RT_LAST_STATUS_AT?Date.now()-GOLD_RT_LAST_STATUS_AT:Infinity;
  if(statusAge>45_000){
-  const fallback=S.gold&&S.gold.state==='fresh'&&S.gold.t&&Date.now()-Date.parse(S.gold.t)<=180_000;
-  return fallback?'fallback':(S.gold&&S.gold.usd>0?'stale':'unavailable');
+  const source=GOLD_RT_STATE.source||(S.gold&&S.gold.marketQuote&&S.gold.marketQuote.source)||S.gold.src;
+  const stamp=Date.parse(GOLD_RT_STATE.provider_timestamp||(S.gold&&S.gold.marketQuote&&S.gold.marketQuote.provider_timestamp)||S.gold.t||'');
+  const verifiedFallback=(source==='xaus'||source==='gold-api')&&Number.isFinite(stamp)&&Date.now()-stamp<=180_000;
+  return verifiedFallback?'fallback':(S.gold&&Number(S.gold.usd)>0?'stale':'unavailable');
  }
  if(GOLD_RT_STATE.freshness_state==='stale')return 'stale';
  if(GOLD_RT_STATE.connection_status==='live'||GOLD_RT_STATE.connection_status==='fallback')return GOLD_RT_STATE.connection_status;
