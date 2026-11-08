@@ -66,6 +66,19 @@ test('user-controlled text is HTML-escaped before insertion into application mar
   assert.doesNotMatch(html, /<b>\$\{lab\(r\)\}<\/b>/);
 });
 
+test('CSV exports and welcome/auth values are escaped before HTML insertion', () => {
+  const csvStart = html.indexOf('function showCsv(t){');
+  const csvEnd = html.indexOf('\nfunction addLoan', csvStart);
+  const csv = html.slice(csvStart, csvEnd);
+  assert.ok(csvStart >= 0 && csvEnd > csvStart, 'CSV preview renderer should exist');
+  assert.match(csv, /<textarea[^>]*>\$\{htm\(t\)\}<\/textarea>/);
+  const splashStart = html.indexOf('function splash(){');
+  const splashEnd = html.indexOf('\nfunction auth()', splashStart);
+  const splash = html.slice(splashStart, splashEnd);
+  assert.match(splash, /\$\{htm\(WEL\)\}/);
+  assert.match(html, /htm\(S\.user\.email\)/);
+});
+
 test('home dashboard separates seven categories and uses correct asset/income ratio bases', () => {
   const homeStart = html.indexOf('PG.home=()=>');
   const homeEnd = html.indexOf('const hl=()=>', homeStart);
