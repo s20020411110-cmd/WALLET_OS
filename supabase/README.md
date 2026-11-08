@@ -28,6 +28,8 @@ This is a dedicated project for WALLET OS. It is not the Supabase project used b
 | 20261108041330 | wallet_os_transaction_correction_link_indexes_v1 | Indexes for transaction correction/reversal relationships |
 | 20261108045807 | wallet_os_transaction_rpc_invoker_hardening_v1 | Public transaction edit/void wrappers changed to SECURITY INVOKER |
 | 20261108051315 | wallet_os_duplicate_request_indexes_cleanup_v1 | Removed four identical redundant request-key indexes |
+| 20261108061254 | wallet_os_manual_finance_categories_v1 | Owner-scoped manual income/expense categories with matching ledger accounts |
+| 20261108062844 | wallet_os_loans_linked_to_wallet_accounts_v1 | Atomic loan/receivable origination linked to the selected wallet and journal |
 
 The first six migrations remain recorded in the hosted Supabase migration history; the eight later hardening/correction migrations above are tracked as SQL files in this repository. The exact SQL for the original core schema migrations has not yet been exported into supabase/migrations/. Preserve hosted history as the source of truth and export/review the original SQL before future local schema work rather than reconstructing it from this guide.
 
@@ -50,6 +52,8 @@ Views:
 - monthly_financial_summary provides transaction totals by month, currency and type.
 
 All financial quantities use PostgreSQL NUMERIC, not floating-point types.
+
+Income and expense categories are user-extensible. A manual category is created with its own owner-scoped category row and corresponding income/expense ledger account; browser clients do not receive direct category insert privileges.
 
 ## RPC contract
 
@@ -132,6 +136,8 @@ Add that same origin (and any custom production domain later adopted) to the all
 - Accounts are loaded from `wallet_account_balances`; balances are derived from journal lines.
 - Activity, savings goals, loans, investment positions/trades, categories and budgets are loaded from the authenticated user's rows.
 - Income/expense/transfer/savings/loan/investment operations use `post_financial_transaction`.
+- New loan and receivable records use `create_loan_from_account_v1`: the user selects the cash/bank wallet, and a single journal posting both opens the liability/receivable and updates that wallet. Borrowed proceeds debit the wallet and credit the loan liability; money lent debits the receivable and credits the selected wallet. The operation is idempotent and checks wallet ownership, currency and available funds for receivables.
+- Income sources and expense categories are entered as text; a matching owner-scoped category is resolved before posting. Manual budget expense categories use the same category registry, and spending is matched by category ID plus an optional selected wallet.
 - Wallet, savings goal, loan and investment creation use their dedicated RPCs; the UI forms now write to Supabase when signed in.
 - Gold asset subtypes (bars, coins, jewelry, sovereigns, scrap, other) are persisted in `investment_assets.asset_subtype` through `create_investment_asset_v3`.
 - Budgets use an owner-scoped upsert with period type/week fields.
@@ -166,6 +172,17 @@ Add that same origin (and any custom production domain later adopted) to the all
 - Build audited update/archive RPCs for cloud entity metadata and a correction/reversal workflow for posted transactions.
 - Add trusted server-side ingestion for the exchange-rate and gold-quote tables; the app currently continues to fetch/retain market quotes through its existing browser/API path.
 - Validate the production project's access-protection and domain settings with the intended users.
+
+## Finance workflow integration — 2026-11-08
+
+- Account creation accepts the current cash/bank/e-wallet opening balance. Cloud opening balances are posted through the existing double-entry `create_wallet_account` RPC; local balances include the saved opening amount plus subsequent transactions.
+- Income sources and expense categories are manually entered. Custom category creation is persisted through `create_finance_category`, creates the corresponding ledger account, returns the existing owner category on a repeated name, and is queued/remapped safely when offline.
+- Budgets accept a manually entered name and expense category. Optional wallet links constrain the spending calculation to that account; otherwise the budget tracks all matching-category spending.
+- Loans payable and receivables are separated into distinct pages. Both retain a common payment ledger, but origination is now account-linked through `create_loan_from_account_v1` so borrowed proceeds increase the selected wallet while receivables reduce the wallet that funds the lending.
+- Transaction history and loan cards show the loan/receivable origination movement. That originating journal row is protected from generic transaction editing/deletion, which would otherwise detach the cash movement from the loan principal.
+- A rollback-only Supabase integration check created a temporary wallet with 100 SAR, originated a 40 SAR borrowed loan and a 20 SAR receivable, then verified a 120 SAR wallet balance, a 40 SAR loan liability, a 20 SAR receivable asset and balanced journal entries. A separate rollback-only check verified manual expense-category creation, its ledger account and duplicate-name reuse. Both enclosing transactions were rolled back; no test records were left behind.
+- The new loan RPC wrapper is SECURITY INVOKER; its private implementation is SECURITY DEFINER with an empty search path, checks `auth.uid()` ownership and has execute grants only for authenticated users. The anon role has no execute permission.
+- Deployment remains deliberately deferred. These source and database changes are not claimed to be live on the production URL.
 
 ## QA and integrity follow-up — 2026-11-08
 
