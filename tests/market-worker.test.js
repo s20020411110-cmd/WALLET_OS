@@ -296,6 +296,12 @@ test('worker snapshot and posting logic never mutates financial transaction endp
   assert.match(source, /snapshotIntervalMs/);
 });
 
+test('gold snapshot table grants insertion only to the server worker role', () => {
+  const migration=fs.readFileSync(path.join(__dirname,'..','supabase','wallet_os_gold_quotes_service_insert_v1.sql'),'utf8');
+  assert.match(migration,/grant insert on table public\.gold_price_quotes to service_role/i);
+  assert.match(migration,/revoke insert, update, delete on table public\.gold_price_quotes from anon, authenticated/i);
+});
+
 test('Vercel fallback returns stale/unavailable status instead of fabricating or zero-filling', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'api', 'gold-price.js'), 'utf8');
   assert.match(source, /Cache-Control', 'no-store/);
