@@ -807,17 +807,16 @@ PG.invest=()=>{
  const headers=["الأصل|Asset","الجرامات|Grams","متوسط التكلفة/جم|Avg cost/g","السعر/جم|Price/g","القيمة الحالية|Current value","ربح/خسارة كلي|Total P/L","الإجراءات|Actions"].map(h=>"<th>"+_(h)+"</th>").join("");
  const rows=A.map(({a,p})=>{
   const unrealized=p.v-p.c,total=unrealized+p.pl;
-  const actions=a.archived?'<small class=bc>'+_("مؤرشف|Archived")+'</small><button class=bt data-a=restoreInvestment data-v="'+a.id+'">'+_("استعادة|Restore")+'</button>':
-   '<button class=ib data-a=ib data-v="'+a.id+'" title="'+_("شراء ذهب|Buy gold")+'" aria-label="'+_("شراء ذهب|Buy gold")+'">＋</button>'+
+  const actions='<button class=ib data-a=ib data-v="'+a.id+'" title="'+_("شراء ذهب|Buy gold")+'" aria-label="'+_("شراء ذهب|Buy gold")+'">＋</button>'+
    '<button class=ib data-a=is data-v="'+a.id+'" title="'+_("بيع ذهب|Sell gold")+'" aria-label="'+_("بيع ذهب|Sell gold")+'">−</button>'+
    '<button class=ib data-a=ip data-v="'+a.id+'" title="'+_("تعديل الأصل|Edit asset")+'" aria-label="'+_("تعديل الأصل|Edit asset")+'">✎</button>'+
-   '<button class=ib data-a=di data-v="'+a.id+'" title="'+_("أرشفة الأصل|Archive asset")+'" aria-label="'+_("أرشفة الأصل|Archive asset")+'">⌑</button>';
+   '<button class=ib data-a=di data-v="'+a.id+'" title="'+_("حذف الأصل وعملياته نهائيًا|Permanently delete asset and operations")+'" aria-label="'+_("حذف الأصل وعملياته نهائيًا|Permanently delete asset and operations")+'">✕</button>';
   return "<tr><td>"+esc(a.n)+"<small>"+_(GT[a.type||0]||GT[5])+" · "+(a.karat||24)+"K</small></td><td>"+Number(p.q||0).toFixed(3)+"</td><td>"+(p.q?fm(p.c/p.q,a.cur):"—")+"</td><td>"+fm(gp(a),a.cur)+"</td><td class=am>"+fm(p.v,a.cur)+"</td>"+
    '<td class=am style="color:'+(total>=0?"#16a34a":"#dc2626")+'">'+fm(total)+'<small>'+_("محقق|Realized")+" "+fm(p.pl)+" · "+_("غير محقق|Unrealized")+" "+fm(unrealized)+"</small></td><td><div class=cht>"+actions+"</div></td></tr>";
  }).join("")||'<tr><td colspan=7 class=em>'+_("لا ذهب مسجل|No gold yet")+"</td></tr>";
  const assetIds=new Set(S.inv.map(a=>String(a.id)));
  const history=S.tx.filter(r=>(r.t==="buy"||r.t==="sell")&&assetIds.has(String(r.ref))&&!r.is_voided)
-  .sort((a,b)=>String(b.d||"").localeCompare(String(a.d||""))||Number(b.id||0)-Number(a.id||0)).slice(0,40);
+  .sort((a,b)=>String(b.d||"").localeCompare(String(a.d||""))||Number(b.id||0)-Number(a.id||0)).slice();
  const historyRows=history.map(r=>"<tr><td>"+r.d+"</td><td>"+(r.t==="buy"?_("شراء|Purchase"):_("بيع|Sale"))+"</td><td>"+esc(nm(S.inv,r.ref))+"</td><td>"+Number(r.q||0).toFixed(4)+" g</td><td class=am>"+fm(r.a,r.c)+"</td><td>"+esc(nm(S.accs,r.acc))+"</td>"+
   '<td><div class=cht><button class=ib data-a=ed data-v="'+r.id+'" title="'+_("تعديل العملية|Edit transaction")+'" aria-label="'+_("تعديل العملية|Edit transaction")+'">✎</button><button class=ib data-a=del data-v="'+r.id+'" title="'+_("حذف مع عكس الأثر|Delete and reverse")+'" aria-label="'+_("حذف مع عكس الأثر|Delete and reverse")+'">✕</button></div></td></tr>').join("")||
   '<tr><td colspan=7 class=em>'+_("لا توجد عمليات شراء أو بيع مسجلة بعد|No purchase or sale transactions yet")+"</td></tr>";
