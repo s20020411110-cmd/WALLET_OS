@@ -109,7 +109,7 @@ test('cloud budget writes and refreshes preserve manual category ID, name and ac
 });
 
 test('offline budget queue maps pending custom category and account IDs before the upsert', () => {
-  assert.match(html, /kind:'budget',categoryIndex:Number\(b\.ci\),categoryId,name,accountId/);
+  assert.match(html, /kind:'budget',categoryIndex:Number\(b\.ci\),categoryId,categoryName,name,accountId/);
   assert.match(html, /item\.categoryId\?\(map\[String\(item\.categoryId\)\]\|\|item\.categoryId\)/);
   assert.match(html, /budget_name:item\.name,account_id:item\.accountId\?\(map\[String\(item\.accountId\)\]\|\|item\.accountId\):null/);
 });
