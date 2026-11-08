@@ -37,7 +37,7 @@ Run the image with the variables from `.env.example` supplied by the host's secr
 
 ## Required Supabase setup
 
-Apply `supabase/wallet_os_gold_realtime_channel_v1.sql`. It creates a server-only lease table and RPCs and grants authenticated users read-only access to the private gold broadcast topic. The worker's secret key is the only credential allowed to call lease RPCs or insert historical quote rows.
+Apply `supabase/wallet_os_gold_realtime_channel_v1.sql`, then `wallet_os_gold_realtime_rls_initplan_v1.sql` and `wallet_os_gold_worker_lease_coalesce_fix_v1.sql`. It creates a server-only lease table and RPCs and grants authenticated users read-only access to the private gold broadcast topic. The worker's secret key is the only credential allowed to call lease RPCs or insert historical quote rows.
 
 In Supabase Dashboard → Realtime → Settings, disable **Allow public access** so private-channel authorization is enforced globally. The application subscribes with `config.private=true`; only authenticated sessions can receive this topic. No browser client may send to the topic.
 
